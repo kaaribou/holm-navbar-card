@@ -39,7 +39,7 @@ C'est la grande nouveauté : un onglet ou une tuile peut maintenant afficher **n
 
 ![Cartes dans un sous-menu](docs/images/cartes-dans-sous-menu.png)
 
-- **Ajout avec le sélecteur de cartes de Home Assistant**, le même que sur un tableau de bord, puis réglage avec **l'éditeur de la carte** (visuel ou code).
+- **Ajout en un clic** depuis un sélecteur rapide (recherche, cartes Home Assistant et cartes personnalisées), puis réglage avec **l'éditeur de la carte** de Home Assistant (visuel ou code).
 - **Dimensionnement** : largeur du panneau (étroite à pleine largeur), **1 à 3 colonnes** de cartes, et largeur de chaque carte (une ou plusieurs colonnes, ou toute la ligne).
 - **Les actions des cartes fonctionnent** : un clic sur la carte *Bureau* ouvre la vue du bureau et referme le panneau ; appui long et fenêtre d'informations aussi.
 - Cartes **seules** ou **avec des tuiles**, au-dessus ou en dessous.
@@ -178,7 +178,7 @@ Dans l'éditeur, chaque tuile d'un sous-menu a elle aussi sa section **Sous-menu
 Chaque onglet et chaque tuile de sous-menu peut afficher des **cartes Lovelace** dans son panneau : un thermostat dans le sous-menu *Chauffage*, la caméra du portail dans *Sécurité*, un graphique de consommation dans *Énergie*…
 
 1. Dans l'éditeur, ouvrez l'onglet ou la tuile, section **Cartes** → **Ajouter une carte**.
-2. Choisissez le type de carte dans **le sélecteur de Home Assistant** (le même que pour un tableau de bord).
+2. Choisissez le type de carte dans **le sélecteur rapide** : tapez quelques lettres pour filtrer, la carte est ajoutée avec une configuration de départ. Le lien « Afficher les aperçus » ouvre le sélecteur complet de Home Assistant, plus lent.
 3. Réglez-la avec **l'éditeur de la carte** ; le bouton `{ }` bascule en éditeur de code.
 4. Si le panneau contient aussi des tuiles, choisissez la **position des cartes** : au-dessus (par défaut) ou en dessous des tuiles.
 
@@ -345,7 +345,7 @@ routes:
 | La barre cache le bas de la page | La carte ajoute automatiquement une marge en bas de la vue ; rechargez la page si besoin. |
 | Pas de note de musique / panneau vide avec un message | Installez **HOLM Music Card** et **Music Assistant**, puis rechargez la page (Ctrl + F5). |
 | Un lecteur n'est pas pris en compte | Seuls les lecteurs de l'intégration **Music Assistant** sont surveillés ; vérifiez la liste *Lecteurs surveillés*. |
-| Le sélecteur de cartes ne s'affiche pas dans l'éditeur | Attendez une seconde (il est chargé à la demande) ou rechargez la page ; vous pouvez aussi passer par l'éditeur de code `{ }`. |
+| L'éditeur d'une carte ne s'affiche pas | Attendez une seconde (il est préchargé à l'ouverture de l'éditeur) ou rechargez la page ; vous pouvez aussi passer par l'éditeur de code `{ }`. |
 | La langue n'est pas la bonne | Option **Langue** de la carte maître (par défaut : la langue de votre profil Home Assistant). |
 | La nouvelle version ne s'affiche pas | Videz le cache (Ctrl + F5, ou « Recharger les ressources » dans l'application mobile). |
 
@@ -363,4 +363,6 @@ La barre vous plaît ? Vous pouvez m'offrir une bière 🍺
 
 Code sous licence **MIT** — © kaaribou. Voir le [CHANGELOG](CHANGELOG.md).
 
-Fait partie de la collection **HOLM** : [Volets HOLM](https://github.com/kaaribou/volets-holm) · [Climat HOLM](https://github.com/kaaribou/climat-holm) · [Carburant HOLM](https://github.com/kaaribou/carburant-holm) · [Commandes à la maison HOLM](https://github.com/kaaribou/commandes-holm) · [HOLM Climate Card](https://github.com/kaaribou/climate-card-holm) · [HOLM Music Card](https://github.com/kaaribou/holm-music-card) · [HOLM Sentinel Card](https://github.com/kaaribou/holm-sentinel-card) · [HOLM Security Card](https://github.com/kaaribou/holm-security-card) · [HOLM Recordings Card](https://github.com/kaaribou/holm-recordings-card) · [HOLM Covers Card](https://github.com/kaaribou/holm-covers-card) · [HOLM Power Flow Card](https://github.com/kaaribou/holm-power-flow-card) · [HOLM Energy Cards](https://github.com/kaaribou/holm-energy-cards) · [HOLM Radiator Card](https://github.com/kaaribou/holm-radiator-card) · [HOLM Floor Card](https://github.com/kaaribou/holm-floor-card) · [HOLM Smoke Card](https://github.com/kaaribou/holm-smoke-card) · [HOLM BG Card](https://github.com/kaaribou/holm-bg-card).
+Fait partie de **HOLM — Home Orchestration & Living Management** : la gestion et l'orchestration intelligente de la maison.
+
+Les autres projets : [Volets HOLM](https://github.com/kaaribou/volets-holm) · [Climat HOLM](https://github.com/kaaribou/climat-holm) · [Carburant HOLM](https://github.com/kaaribou/carburant-holm) · [Commandes à la maison HOLM](https://github.com/kaaribou/commandes-holm) · [HOLM Climate Card](https://github.com/kaaribou/climate-card-holm) · [HOLM Music Card](https://github.com/kaaribou/holm-music-card) · [HOLM Sentinel Card](https://github.com/kaaribou/holm-sentinel-card) · [HOLM Security Card](https://github.com/kaaribou/holm-security-card) · [HOLM Recordings Card](https://github.com/kaaribou/holm-recordings-card) · [HOLM Covers Card](https://github.com/kaaribou/holm-covers-card) · [HOLM Power Flow Card](https://github.com/kaaribou/holm-power-flow-card) · [HOLM Energy Cards](https://github.com/kaaribou/holm-energy-cards) · [HOLM Radiator Card](https://github.com/kaaribou/holm-radiator-card) · [HOLM Floor Card](https://github.com/kaaribou/holm-floor-card) · [HOLM Smoke Card](https://github.com/kaaribou/holm-smoke-card) · [HOLM BG Card](https://github.com/kaaribou/holm-bg-card).

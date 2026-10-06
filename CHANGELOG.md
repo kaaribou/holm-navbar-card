@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.1
+- **Éditeur beaucoup plus rapide** : le contenu des onglets, tuiles et cartes n'est construit qu'à leur ouverture ; une modification ne reconstruit plus que l'élément concerné ; les allers-retours de configuration avec Home Assistant ne reconstruisent plus l'éditeur.
+- **Sélecteur de cartes rapide** : liste filtrable des cartes Home Assistant et personnalisées, ouverte instantanément ; le sélecteur complet (avec aperçus) reste disponible.
+- Le sélecteur et l'éditeur de cartes de Home Assistant sont préchargés à l'ouverture de l'éditeur.
+
 ## 1.6.0
 - **Libellés sur plusieurs lignes** (#2) : les noms des tuiles ne sont plus coupés ; option *Lignes des libellés* (1, 2, 3 ou illimité). Dans la barre, les libellés de plusieurs mots passent aussi à la ligne.
 - **Sous-menus imbriqués** (#4) : une tuile peut avoir son propre sous-menu (appui long, ou toucher si elle n'a ni vue ni action), jusqu'à 3 niveaux ; bouton retour, fil d'Ariane, touche Échap.

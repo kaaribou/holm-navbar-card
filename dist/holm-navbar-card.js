@@ -12,7 +12,7 @@
  * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.6.0";
+  const VERSION = "1.6.1";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
   const DEFAULTS = { labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
   const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
@@ -53,6 +53,7 @@
       exp_tile: "Action / entité (tuile dynamique)", exp_tab: "Pastille, image, visibilité",
       cards_title: "Cartes", cards_hint: "Cartes Lovelace affichées dans le panneau (thermostat, caméra, graphique…).",
       add_card: "Ajouter une carte", pick_card: "Choisis le type de carte :", cancel: "Annuler", code_editor: "Éditeur de code", visual_editor: "Éditeur visuel",
+      pk_search: "Rechercher une carte…", pk_ha: "Cartes Home Assistant", pk_custom: "Cartes personnalisées", pk_previews: "Afficher les aperçus (plus lent)", pk_none: "Aucune carte trouvée",
       loading: "Chargement de l'éditeur de cartes…",
     },
     en: {
@@ -86,6 +87,7 @@
       exp_tile: "Action / entity (live tile)", exp_tab: "Badge, image, visibility",
       cards_title: "Cards", cards_hint: "Lovelace cards shown in the panel (thermostat, camera, graph…).",
       add_card: "Add a card", pick_card: "Pick a card type:", cancel: "Cancel", code_editor: "Code editor", visual_editor: "Visual editor",
+      pk_search: "Search a card…", pk_ha: "Home Assistant cards", pk_custom: "Custom cards", pk_previews: "Show previews (slower)", pk_none: "No card found",
       loading: "Loading the card editor…",
     },
     de: {
@@ -119,6 +121,7 @@
       exp_tile: "Aktion / Entität (dynamische Kachel)", exp_tab: "Plakette, Bild, Sichtbarkeit",
       cards_title: "Karten", cards_hint: "Lovelace-Karten im Panel (Thermostat, Kamera, Diagramm…).",
       add_card: "Karte hinzufügen", pick_card: "Kartentyp wählen:", cancel: "Abbrechen", code_editor: "Code-Editor", visual_editor: "Visueller Editor",
+      pk_search: "Karte suchen…", pk_ha: "Home-Assistant-Karten", pk_custom: "Benutzerdefinierte Karten", pk_previews: "Vorschauen anzeigen (langsamer)", pk_none: "Keine Karte gefunden",
       loading: "Karteneditor wird geladen…",
     },
     es: {
@@ -152,6 +155,7 @@
       exp_tile: "Acción / entidad (mosaico dinámico)", exp_tab: "Indicador, imagen, visibilidad",
       cards_title: "Tarjetas", cards_hint: "Tarjetas Lovelace mostradas en el panel (termostato, cámara, gráfico…).",
       add_card: "Añadir una tarjeta", pick_card: "Elige el tipo de tarjeta:", cancel: "Cancelar", code_editor: "Editor de código", visual_editor: "Editor visual",
+      pk_search: "Buscar una tarjeta…", pk_ha: "Tarjetas de Home Assistant", pk_custom: "Tarjetas personalizadas", pk_previews: "Mostrar vistas previas (más lento)", pk_none: "Ninguna tarjeta encontrada",
       loading: "Cargando el editor de tarjetas…",
     },
     it: {
@@ -185,6 +189,7 @@
       exp_tile: "Azione / entità (riquadro dinamico)", exp_tab: "Badge, immagine, visibilità",
       cards_title: "Schede", cards_hint: "Schede Lovelace mostrate nel pannello (termostato, telecamera, grafico…).",
       add_card: "Aggiungi una scheda", pick_card: "Scegli il tipo di scheda:", cancel: "Annulla", code_editor: "Editor di codice", visual_editor: "Editor visivo",
+      pk_search: "Cerca una scheda…", pk_ha: "Schede di Home Assistant", pk_custom: "Schede personalizzate", pk_previews: "Mostra anteprime (più lento)", pk_none: "Nessuna scheda trovata",
       loading: "Caricamento dell'editor delle schede…",
     },
     nl: {
@@ -218,6 +223,7 @@
       exp_tile: "Actie / entiteit (dynamische tegel)", exp_tab: "Badge, afbeelding, zichtbaarheid",
       cards_title: "Kaarten", cards_hint: "Lovelace-kaarten in het paneel (thermostaat, camera, grafiek…).",
       add_card: "Kaart toevoegen", pick_card: "Kies het type kaart:", cancel: "Annuleren", code_editor: "Code-editor", visual_editor: "Visuele editor",
+      pk_search: "Kaart zoeken…", pk_ha: "Home Assistant-kaarten", pk_custom: "Aangepaste kaarten", pk_previews: "Voorbeelden tonen (trager)", pk_none: "Geen kaart gevonden",
       loading: "Kaarteditor laden…",
     },
     pt: {
@@ -251,6 +257,7 @@
       exp_tile: "Ação / entidade (mosaico dinâmico)", exp_tab: "Indicador, imagem, visibilidade",
       cards_title: "Cartões", cards_hint: "Cartões Lovelace mostrados no painel (termóstato, câmara, gráfico…).",
       add_card: "Adicionar um cartão", pick_card: "Escolhe o tipo de cartão:", cancel: "Cancelar", code_editor: "Editor de código", visual_editor: "Editor visual",
+      pk_search: "Procurar um cartão…", pk_ha: "Cartões do Home Assistant", pk_custom: "Cartões personalizados", pk_previews: "Mostrar pré-visualizações (mais lento)", pk_none: "Nenhum cartão encontrado",
       loading: "A carregar o editor de cartões…",
     },
     pl: {
@@ -284,6 +291,7 @@
       exp_tile: "Akcja / encja (dynamiczny kafelek)", exp_tab: "Plakietka, obraz, widoczność",
       cards_title: "Karty", cards_hint: "Karty Lovelace wyświetlane w panelu (termostat, kamera, wykres…).",
       add_card: "Dodaj kartę", pick_card: "Wybierz typ karty:", cancel: "Anuluj", code_editor: "Edytor kodu", visual_editor: "Edytor wizualny",
+      pk_search: "Szukaj karty…", pk_ha: "Karty Home Assistant", pk_custom: "Karty niestandardowe", pk_previews: "Pokaż podglądy (wolniej)", pk_none: "Nie znaleziono karty",
       loading: "Ładowanie edytora kart…",
     },
   };
@@ -1165,7 +1173,10 @@
     t(key, ...a) { return tr(langOf(this._config, this._hass), key, ...a); }
     setConfig(config) {
       // HA gèle (deepFreeze) la config reçue : on travaille toujours sur une copie
-      this._config = JSON.parse(JSON.stringify(config || {}));
+      const j = JSON.stringify(config || {});
+      if (j === this._sent) return; // écho de notre propre modification : rien à reconstruire
+      this._config = JSON.parse(j);
+      this._sent = j;
       if (!this._self) this._render();
     }
     set hass(hass) {
@@ -1178,15 +1189,29 @@
       this._lovelace = l && Array.isArray(l.views) ? l : l && l.config && Array.isArray(l.config.views) ? l.config : { views: [] };
       this.querySelectorAll("hui-card-element-editor, hui-card-picker").forEach((f) => (f.lovelace = l));
     }
+    // rerender : true = tout l'éditeur ; un chemin (["routes", 1, …]) = seulement le panneau de cet élément
     _update(fn, rerender) {
       const c = JSON.parse(JSON.stringify(this._config));
       fn(c);
       this._config = c;
+      this._sent = JSON.stringify(c);
       this._self = true;
-      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: JSON.parse(JSON.stringify(c)) }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: JSON.parse(this._sent) }, bubbles: true, composed: true }));
       clearTimeout(this._selfT);
       this._selfT = setTimeout(() => (this._self = false), 400);
-      if (rerender) this._render();
+      if (Array.isArray(rerender)) this._refresh(rerender);
+      else if (rerender) this._render();
+    }
+    // reconstruit uniquement le panneau d'un onglet / d'une tuile (beaucoup plus rapide que tout l'éditeur)
+    _refresh(path) {
+      if (path.length < 2) return this._render();
+      const old = this._panels && this._panels.get(path.join("."));
+      const parent = getAt(this._config, path.slice(0, -1));
+      const idx = path[path.length - 1];
+      if (!old || !old.isConnected || !Array.isArray(parent) || !parent[idx]) return this._render();
+      const frag = document.createDocumentFragment();
+      this._itemPanel(frag, path, parent[idx], (path.length - 2) / 2, idx, parent.length);
+      old.replaceWith(frag);
     }
     _form(schema, data, onChange) {
       const f = document.createElement("ha-form");
@@ -1204,13 +1229,20 @@
       b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
       return b;
     }
-    _panel(key, header) {
+    // panneau repliable dont le contenu n'est construit qu'à la première ouverture
+    _panel(key, header, build) {
       const p = document.createElement("ha-expansion-panel");
       p.outlined = true;
       p.expanded = this._open.has(key);
-      p.addEventListener("expanded-changed", (e) => { if (e.target !== p) return; e.detail.expanded ? this._open.add(key) : this._open.delete(key); });
+      let built = false;
+      const fill = () => { if (built || !build) return; built = true; const el = build(); if (el) p.appendChild(el); };
+      p.addEventListener("expanded-changed", (e) => {
+        if (e.target !== p) return;
+        if (e.detail.expanded) { this._open.add(key); fill(); } else this._open.delete(key);
+      });
       header.slot = "header";
       p.appendChild(header);
+      if (p.expanded) fill();
       return p;
     }
     _itemFromForm(v, old) {
@@ -1270,7 +1302,7 @@
         ]);
       } catch (e) { /* éditeur YAML seul */ }
       this._loadingEditors = false;
-      this._render();
+      if (this._waitingEditors) { this._waitingEditors = false; this._render(); }
       return true;
     }
     _itemSchema(isSub) {
@@ -1291,16 +1323,25 @@
     _itemPanel(container, path, item, depth, idx, count) {
       const key = path.join(".");
       const parentPath = path.slice(0, -1);
-      const move = (d) => this._update((cc) => { const a = getAt(cc, parentPath); const j = idx + d; if (j < 0 || j >= a.length) return; a.splice(j, 0, a.splice(idx, 1)[0]); }, true);
+      const scope = depth > 0 ? parentPath.slice(0, -1) : true; // tuile : on reconstruit l'élément parent ; onglet : tout
+      const move = (d) => this._update((cc) => { const a = getAt(cc, parentPath); const j = idx + d; if (j < 0 || j >= a.length) return; a.splice(j, 0, a.splice(idx, 1)[0]); }, scope);
       const head = this._head(item, depth === 0 ? this.t("tab_n", idx + 1) : this.t("item_n", idx + 1), [
         this._btn("mdi:arrow-up", this.t("up"), () => idx > 0 && move(-1)),
         this._btn("mdi:arrow-down", this.t("down"), () => idx < count - 1 && move(1)),
         this._btn("mdi:delete-outline", this.t("del"), () => this._update((cc) => {
           const a = getAt(cc, parentPath); a.splice(idx, 1);
           if (depth > 0 && !a.length) delete getAt(cc, parentPath.slice(0, -1)).popup;
-        }, true)),
+        }, scope)),
       ]);
-      const p = this._panel(key, head);
+      const p = this._panel(key, head, () => this._itemBody(path, depth, head));
+      (this._panels = this._panels || new Map()).set(key, p);
+      container.appendChild(p);
+    }
+    _itemBody(path, depth, head) {
+      const key = path.join(".");
+      const parentPath = path.slice(0, -1);
+      const idx = path[path.length - 1];
+      const item = getAt(this._config, path) || {};
       const inner = document.createElement("div");
       inner.className = "hn-in";
       inner.appendChild(this._form(this._itemSchema(depth > 0), this._formData(item), (v) => {
@@ -1320,14 +1361,13 @@
           const j = (item.popup || []).length;
           this._open.add(key);
           this._open.add(path.concat("popup", j).join("."));
-          this._update((cc) => { const it = getAt(cc, path); it.popup = it.popup || []; it.popup.push({ label: "", icon: "mdi:star-outline" }); }, true);
+          this._update((cc) => { const it = getAt(cc, path); it.popup = it.popup || []; it.popup.push({ label: "", icon: "mdi:star-outline" }); }, path);
         });
         sub.appendChild(add);
         inner.appendChild(sub);
       }
       inner.appendChild(this._cardsEditor(path, item));
-      p.appendChild(inner);
-      container.appendChild(p);
+      return inner;
     }
     // cartes Lovelace du panneau, avec le sélecteur et l'éditeur de cartes de Home Assistant
     _cardsEditor(path, item) {
@@ -1342,6 +1382,7 @@
         w.className = "hn-note";
         w.textContent = this.t("loading");
         box.appendChild(w);
+        this._waitingEditors = true;
         this._ensureCardEditors();
       }
       if (cards.length) {
@@ -1365,7 +1406,7 @@
               if (v.panel_width && v.panel_width !== "auto") it.panel_width = v.panel_width; else delete it.panel_width;
               const n = parseInt(v.cards_columns, 10);
               if (n > 1) it.cards_columns = n; else { delete it.cards_columns; delete it.cards_size; }
-            }, colsChanged);
+            }, colsChanged ? path : false);
           }));
       }
       const cols = Math.max(1, Math.min(3, parseInt(item.cards_columns, 10) || 1));
@@ -1376,7 +1417,7 @@
           const a = getAt(cc, path).cards; const j = k + d; if (j < 0 || j >= a.length) return;
           a.splice(j, 0, a.splice(k, 1)[0]);
           sizeOps(cc, (sz) => { while (sz.length < a.length) sz.push(null); sz.splice(j, 0, sz.splice(k, 1)[0]); });
-        }, true);
+        }, path);
         const hd = document.createElement("div");
         hd.className = "hn-row";
         const tt = document.createElement("div");
@@ -1394,8 +1435,9 @@
             const it = getAt(cc, path); it.cards.splice(k, 1);
             sizeOps(cc, (sz) => sz.splice(k, 1));
             if (!it.cards.length) { ["cards", "cards_position", "cards_columns", "cards_size", "panel_width"].forEach((x) => delete it[x]); }
-          }, true)));
-        const p = this._panel(ckey, hd);
+          }, path)));
+        // l'éditeur de la carte (coûteux) n'est créé qu'à l'ouverture de son panneau
+        const p = this._panel(ckey, hd, () => {
         const inner = document.createElement("div");
         inner.className = "hn-in";
         if (cols > 1) {
@@ -1413,7 +1455,7 @@
               sizeOps(cc, () => {});
             })));
         }
-        if (ready) {
+        if (customElements.get("hui-card-element-editor")) {
           ed = document.createElement("hui-card-element-editor");
           ed.hass = this._hass;
           ed.lovelace = this._lovelace || { views: [] };
@@ -1431,45 +1473,104 @@
           });
           inner.appendChild(ed);
         }
-        p.appendChild(inner);
+        return inner;
+        });
         box.appendChild(p);
       });
-      if (this._picker === key && ready) {
-        const wrap = document.createElement("div");
-        wrap.className = "hn-pick";
-        const top = document.createElement("div");
-        top.className = "hn-row";
-        const lb = document.createElement("div");
-        lb.className = "t";
-        lb.textContent = this.t("pick_card");
-        top.append(lb, this._btn("mdi:close", this.t("cancel"), () => { this._picker = null; this._render(); }));
-        const pk = document.createElement("hui-card-picker");
-        pk.hass = this._hass;
-        pk.lovelace = this._lovelace || { views: [] };
-        pk.addEventListener("config-changed", (e) => {
-          e.stopPropagation();
-          const nc = e.detail && e.detail.config;
-          if (!nc) return;
-          const n = (item.cards || []).length;
-          this._picker = null;
-          this._open.add(`${key}.c${n}`);
-          this._update((cc) => { const it = getAt(cc, path); it.cards = it.cards || []; it.cards.push(nc); }, true);
-        });
-        wrap.append(top, pk);
-        box.appendChild(wrap);
-      } else {
+      const addCard = (nc) => {
+        const n = (getAt(this._config, path).cards || []).length;
+        this._picker = null;
+        this._open.add(key);
+        this._open.add(`${key}.c${n}`);
+        this._update((cc) => { const it = getAt(cc, path); it.cards = it.cards || []; it.cards.push(nc); }, path);
+      };
+      const addBtn = () => {
         const add = document.createElement("button");
         add.className = "hn-add";
         add.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>${this.t("add_card")}`;
-        add.addEventListener("click", () => { this._picker = key; this._open.add(key); this._render(); });
-        box.appendChild(add);
-      }
+        add.addEventListener("click", () => { this._picker = key; picker = this._fastPicker(key, addCard, () => { this._picker = null; picker.replaceWith(addBtn()); }); add.replaceWith(picker); });
+        return add;
+      };
+      let picker = null;
+      if (this._picker === key) { picker = this._fastPicker(key, addCard, () => { this._picker = null; picker.replaceWith(addBtn()); }); box.appendChild(picker); }
+      else box.appendChild(addBtn());
       return box;
+    }
+    // sélecteur de cartes rapide : liste filtrable des types (sans aperçus), avec repli sur le sélecteur complet de HA
+    _fastPicker(key, onPick, onCancel) {
+      const wrap = document.createElement("div");
+      wrap.className = "hn-pick";
+      const top = document.createElement("div");
+      top.className = "hn-row";
+      const lb = document.createElement("div");
+      lb.className = "t";
+      lb.textContent = this.t("pick_card");
+      top.append(lb, this._btn("mdi:close", this.t("cancel"), onCancel));
+      const q = document.createElement("input");
+      q.className = "hn-q";
+      q.placeholder = this.t("pk_search");
+      const list = document.createElement("div");
+      list.className = "hn-types";
+      const loc = (k) => { try { return (this._hass && this._hass.localize && this._hass.localize(k)) || ""; } catch (e) { return ""; } };
+      const builtin = ["tile", "entities", "entity", "button", "area", "heading", "gauge", "glance", "sensor", "thermostat", "humidifier", "light", "media-control",
+        "weather-forecast", "history-graph", "statistics-graph", "statistic", "calendar", "todo-list", "logbook", "map", "markdown", "picture", "picture-entity",
+        "picture-glance", "picture-elements", "alarm-panel", "plant-status", "iframe", "vertical-stack", "horizontal-stack", "grid", "conditional"]
+        .map((t) => ({ type: t, name: loc(`ui.panel.lovelace.editor.card.${t}.name`) || t, desc: loc(`ui.panel.lovelace.editor.card.${t}.description`) }));
+      const custom = (window.customCards || []).filter((c) => c && c.type && c.type !== "holm-navbar-card")
+        .map((c) => ({ type: "custom:" + c.type, name: c.name || c.type, desc: c.description || "" }));
+      const pick = async (t) => {
+        list.innerHTML = `<div class="hn-note">${this.t("loading")}</div>`;
+        let cfg = { type: t };
+        try {
+          const ents = Object.keys(this._hass.states);
+          let cls = null;
+          if (t.startsWith("custom:")) { await Promise.race([customElements.whenDefined(t.slice(7)), new Promise((r) => setTimeout(r, 2000))]); cls = customElements.get(t.slice(7)); }
+          else {
+            const h = await window.loadCardHelpers();
+            await h.createCardElement({ type: t });
+            const tag = `hui-${t}-card`;
+            await Promise.race([customElements.whenDefined(tag), new Promise((r) => setTimeout(r, 2000))]);
+            cls = customElements.get(tag);
+          }
+          if (cls && cls.getStubConfig) { const st = await cls.getStubConfig(this._hass, ents, ents); if (st) cfg = { ...st, type: t }; }
+        } catch (e) { /* configuration minimale */ }
+        onPick(cfg);
+      };
+      const item = (c) => { const b = document.createElement("button"); b.className = "hn-type"; b.title = c.desc || ""; b.innerHTML = `<b></b><small></small>`; b.querySelector("b").textContent = c.name; b.querySelector("small").textContent = c.type.replace(/^custom:/, ""); b.addEventListener("click", () => pick(c.type)); return b; };
+      const draw = () => {
+        const f = q.value.trim().toLowerCase();
+        const m = (c) => !f || c.name.toLowerCase().includes(f) || c.type.toLowerCase().includes(f);
+        list.replaceChildren();
+        [[this.t("pk_ha"), builtin.filter(m)], [this.t("pk_custom"), custom.filter(m)]].forEach(([title, arr]) => {
+          if (!arr.length) return;
+          const h = document.createElement("div"); h.className = "hn-subt"; h.textContent = title; list.appendChild(h);
+          const g = document.createElement("div"); g.className = "hn-grid"; arr.forEach((c) => g.appendChild(item(c))); list.appendChild(g);
+        });
+        if (!list.children.length) list.innerHTML = `<div class="hn-subh">${this.t("pk_none")}</div>`;
+      };
+      q.addEventListener("input", draw);
+      draw();
+      const full = document.createElement("button");
+      full.className = "hn-link";
+      full.textContent = this.t("pk_previews");
+      full.addEventListener("click", () => {
+        if (!customElements.get("hui-card-picker")) return;
+        const pk = document.createElement("hui-card-picker");
+        pk.hass = this._hass;
+        pk.lovelace = this._lovelace || { views: [] };
+        pk.addEventListener("config-changed", (e) => { e.stopPropagation(); if (e.detail && e.detail.config) onPick(e.detail.config); });
+        q.remove(); full.remove(); list.replaceWith(pk);
+      });
+      wrap.append(top, q, list, full);
+      setTimeout(() => q.focus(), 50);
+      return wrap;
     }
     _render() {
       if (!this._hass || !this._config) return;
       this._done = true;
-      const scroll = this.closest ? null : null;
+      this._panels = new Map();
+      // préchargement discret du sélecteur et de l'éditeur de cartes de HA, pour qu'ils soient prêts au premier clic
+      if (!this._prewarm) { this._prewarm = true; setTimeout(() => this._ensureCardEditors(), 300); }
       const out = document.createDocumentFragment();
       const st = document.createElement("style");
       out.appendChild(st);
@@ -1492,6 +1593,13 @@
         .hn-add.main{border-style:solid;background:rgba(38,198,218,.2)}
         .hn-pick{margin:8px 0;padding:8px;border-radius:12px;border:1px solid rgba(168,85,247,.45);background:rgba(168,85,247,.06)}
         .hn-pick hui-card-picker{display:block;max-height:60vh;overflow:auto;margin-top:6px}
+        .hn-q{width:100%;box-sizing:border-box;margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid var(--divider-color,#4446);background:var(--card-background-color,transparent);color:inherit;font:inherit}
+        .hn-types{max-height:50vh;overflow:auto;padding-right:2px}
+        .hn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-bottom:10px}
+        .hn-type{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--divider-color,#4446);background:rgba(127,127,127,.06);color:inherit;cursor:pointer;font:inherit}
+        .hn-type:hover{border-color:rgba(168,85,247,.7);background:rgba(168,85,247,.1)}
+        .hn-type b{font-size:13px;font-weight:600}.hn-type small{font-size:11px;opacity:.6;word-break:break-all}
+        .hn-link{background:none;border:none;color:var(--primary-color,#26c6da);cursor:pointer;font:600 12px inherit;padding:4px 0}
       `;
       const c = this._config;
       const langs = [{ value: "auto", label: this.t("o_auto") }, ...Object.entries(LANG_NAMES).map(([value, label]) => ({ value, label }))];
