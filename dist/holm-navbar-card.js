@@ -1,25 +1,303 @@
-/* HOLM Navbar Card — v1
+/* HOLM Navbar Card
  * Barre de navigation flottante « verre liquide » pour tout le dashboard.
  * - Dock en verre dépoli, bulle active qui glisse d'un onglet à l'autre,
  *   icônes colorées, petit rebond au toucher, retour haptique.
  * - Sous-menus en panneau de tuiles ; tuiles « action » liées à une entité
  *   (état en direct : Garage · Ouvert, Alarme · Armée…).
+ * - Sous-menus imbriqués (appui long sur une tuile) et cartes Lovelace dans le panneau.
  * - Pastilles dynamiques (nombre d'entités allumées/ouvertes, valeur).
  * - Config commune : une seule carte « maître » (avec routes) ; les autres
  *   vues posent simplement `type: custom:holm-navbar-card` et la réutilisent.
  * - Barre unique posée sur la page : pas de clignotement en changeant de vue.
+ * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.5.0";
+  const VERSION = "1.6.0";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
-  const STATE_FR = {
-    on: "Allumé", off: "Éteint", open: "Ouvert", closed: "Fermé", opening: "Ouverture…", closing: "Fermeture…",
-    locked: "Verrouillé", unlocked: "Déverrouillé", playing: "Lecture", paused: "Pause", idle: "Inactif",
-    home: "Maison", not_home: "Absent", armed_away: "Armée", armed_home: "Armée (maison)", armed_night: "Armée (nuit)",
-    disarmed: "Désarmée", triggered: "Déclenchée", unavailable: "Indispo.", heat: "Chauffe", cool: "Clim",
-  };
-  const DEFAULTS = { labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da" };
+  const DEFAULTS = { labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
+  const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
   const store = (window.__holmNavbar = window.__holmNavbar || { cfg: {}, bar: null, owner: null });
+
+  // ------------------------------------------------------------------
+  //  Traductions (fr, en, de, es, it, nl, pt, pl)
+  // ------------------------------------------------------------------
+  const I18N = {
+    fr: {
+      f_panel_width: "Largeur du panneau", f_cards_columns: "Cartes par ligne", f_span: "Largeur de la carte", o_pw_auto: "Automatique", o_pw_narrow: "Étroit", o_pw_normal: "Normal", o_pw_large: "Large", o_pw_xlarge: "Très large", o_pw_full: "Toute la largeur de l'écran", o_cols: (n) => `${n} par ligne`, o_span: (n) => `${n} colonne${n > 1 ? "s" : ""}`, o_span_full: "Toute la ligne", size_hint: "Taille : largeur du panneau, nombre de cartes par ligne, et largeur de chaque carte.",
+      playing: "En cours de lecture", no_playing: "Aucune lecture en cours",
+      need_music: "Le lecteur <b>HOLM Music Card</b> est nécessaire pour afficher les lecteurs ici. Installe-le depuis HACS (kaaribou/holm-music-card).",
+      start_music: "Lance une musique depuis Music Assistant, elle apparaîtra ici.",
+      back: "Retour", preview_title: "Barre de navigation HOLM", master: "carte maître", common: "config commune", no_tabs: "aucun onglet",
+      edit_master: "Clique sur cette carte (crayon) pour modifier les onglets de toutes les vues.",
+      edit_common: "Cette vue réutilise la barre définie sur la carte maître (celle qui contient les onglets).",
+      preview_note: "La barre s'affiche en bas de l'écran.",
+      card_desc: "Barre de navigation flottante en verre, animée, commune à toutes les vues.", home: "Accueil", lights: "Lumières",
+      f_music_entity: "Mini lecteur Music Assistant (au-dessus de la barre)", f_music_show: "Afficher le mini lecteur", f_music_artwork: "Style de pochette dans le lecteur",
+      f_labels: "Libellés", f_desktop_position: "Position sur ordinateur", f_mobile_style: "Sur mobile", f_auto_hide: "Masquer en défilant", f_haptic: "Vibration", f_accent: "Couleur principale",
+      f_label: "Libellé", f_icon: "Icône", f_url: "Vue à ouvrir", f_color: "Couleur (#hex ou nom)", f_image: "Image (remplace l'icône)", f_entity: "Entité (état affiché sur la tuile)",
+      f_action: "Au toucher", f_perform_action: "Action (ex. script.bonne_nuit)", f_badge_entities: "Pastille : compter les entités actives", f_users: "Visible seulement pour (nom d'utilisateur)",
+      f_music: "Note de musique si lecture en cours + lecteurs à l'appui long", f_music_players: "Lecteurs surveillés (vide = tous ceux de Music Assistant)",
+      f_label_lines: "Lignes des libellés", f_language: "Langue", f_cards_position: "Position des cartes",
+      o_active: "Onglet actif", o_all: "Tous", o_none: "Aucun", o_docked: "Dockée en bas", o_floating: "Flottante", o_bottom: "En bas", o_left: "À gauche", o_right: "À droite", o_hidden: "Masquée",
+      o_only_playing: "Seulement pendant la lecture", o_always: "Toujours", o_cover: "Pochette", o_vinyl: "Vinyle",
+      o_lines1: "1 ligne", o_lines2: "2 lignes", o_lines3: "3 lignes", o_lines0: "Illimité", o_auto: "Automatique (langue de Home Assistant)", o_top: "Au-dessus des tuiles", o_below: "Sous les tuiles",
+      a_navigate: "Aller à une vue", a_toggle: "Basculer l'entité", a_more_info: "Fiche de l'entité", a_perform: "Lancer une action",
+      sec_music: "Mini lecteur de musique", sec_tabs: "Onglets de la barre",
+      warn_music: "⚠️ Les fonctions musique (mini lecteur, note de musique, lecteurs à l'appui long) nécessitent la carte <b>HOLM Music Card</b> et l'intégration <b>Music Assistant</b>. Installe <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> depuis HACS puis recharge la page.",
+      note_common: "Cette carte réutilise la <b>barre commune</b> définie sur la carte maître (celle qui contient les onglets). Pour modifier les onglets, édite la carte maître.",
+      tip_tabs: "Un onglet avec une <b>vue</b> y mène au toucher ; son <b>sous-menu</b> s'ouvre à l'appui long. Un onglet <b>sans vue</b> ouvre directement son sous-menu. Les tuiles d'un sous-menu peuvent elles aussi avoir un sous-menu et des cartes.",
+      up: "Monter", down: "Descendre", del: "Supprimer", add_sub: "Ajouter au sous-menu", add_tab: "Ajouter un onglet",
+      sub_title: "Sous-menu", sub_hold_tab: "S'ouvre à l'appui long sur l'onglet.", sub_tap_tab: "S'ouvre au toucher (onglet sans vue).",
+      sub_hold_tile: "S'ouvre à l'appui long sur la tuile.", sub_tap_tile: "S'ouvre au toucher (tuile sans vue ni action).",
+      tab_n: (n) => `Onglet ${n}`, item_n: (n) => `Élément ${n}`, n_sub: (n) => `${n} sous-menu${n > 1 ? "s" : ""}`, n_cards: (n) => `${n} carte${n > 1 ? "s" : ""}`,
+      exp_tile: "Action / entité (tuile dynamique)", exp_tab: "Pastille, image, visibilité",
+      cards_title: "Cartes", cards_hint: "Cartes Lovelace affichées dans le panneau (thermostat, caméra, graphique…).",
+      add_card: "Ajouter une carte", pick_card: "Choisis le type de carte :", cancel: "Annuler", code_editor: "Éditeur de code", visual_editor: "Éditeur visuel",
+      loading: "Chargement de l'éditeur de cartes…",
+    },
+    en: {
+      f_panel_width: "Panel width", f_cards_columns: "Cards per row", f_span: "Card width", o_pw_auto: "Automatic", o_pw_narrow: "Narrow", o_pw_normal: "Normal", o_pw_large: "Wide", o_pw_xlarge: "Extra wide", o_pw_full: "Full screen width", o_cols: (n) => `${n} per row`, o_span: (n) => `${n} column${n > 1 ? "s" : ""}`, o_span_full: "Whole row", size_hint: "Size: panel width, number of cards per row and width of each card.",
+      playing: "Now playing", no_playing: "Nothing playing",
+      need_music: "The <b>HOLM Music Card</b> player is needed to show players here. Install it from HACS (kaaribou/holm-music-card).",
+      start_music: "Start some music from Music Assistant and it will appear here.",
+      back: "Back", preview_title: "HOLM navigation bar", master: "main card", common: "shared config", no_tabs: "no tabs",
+      edit_master: "Click this card (pencil) to edit the tabs of every view.",
+      edit_common: "This view reuses the bar defined on the main card (the one holding the tabs).",
+      preview_note: "The bar is shown at the bottom of the screen.",
+      card_desc: "Floating, animated glass navigation bar shared by every view.", home: "Home", lights: "Lights",
+      f_music_entity: "Music Assistant mini player (above the bar)", f_music_show: "Show the mini player", f_music_artwork: "Artwork style in the player",
+      f_labels: "Labels", f_desktop_position: "Position on desktop", f_mobile_style: "On mobile", f_auto_hide: "Hide on scroll", f_haptic: "Vibration", f_accent: "Main colour",
+      f_label: "Label", f_icon: "Icon", f_url: "View to open", f_color: "Colour (#hex or name)", f_image: "Image (replaces the icon)", f_entity: "Entity (state shown on the tile)",
+      f_action: "On tap", f_perform_action: "Action (e.g. script.good_night)", f_badge_entities: "Badge: count active entities", f_users: "Only visible to (user name)",
+      f_music: "Music note while playing + players on long press", f_music_players: "Watched players (empty = all Music Assistant players)",
+      f_label_lines: "Label lines", f_language: "Language", f_cards_position: "Cards position",
+      o_active: "Active tab", o_all: "All", o_none: "None", o_docked: "Docked at the bottom", o_floating: "Floating", o_bottom: "Bottom", o_left: "Left", o_right: "Right", o_hidden: "Hidden",
+      o_only_playing: "Only while playing", o_always: "Always", o_cover: "Cover", o_vinyl: "Vinyl",
+      o_lines1: "1 line", o_lines2: "2 lines", o_lines3: "3 lines", o_lines0: "Unlimited", o_auto: "Automatic (Home Assistant language)", o_top: "Above the tiles", o_below: "Below the tiles",
+      a_navigate: "Go to a view", a_toggle: "Toggle the entity", a_more_info: "Entity details", a_perform: "Run an action",
+      sec_music: "Music mini player", sec_tabs: "Bar tabs",
+      warn_music: "⚠️ Music features (mini player, music note, players on long press) need the <b>HOLM Music Card</b> and the <b>Music Assistant</b> integration. Install <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> from HACS, then reload the page.",
+      note_common: "This card reuses the <b>shared bar</b> defined on the main card (the one holding the tabs). To change the tabs, edit the main card.",
+      tip_tabs: "A tab with a <b>view</b> opens it on tap; its <b>submenu</b> opens on long press. A tab <b>without a view</b> opens its submenu directly. Submenu tiles can have their own submenu and cards too.",
+      up: "Move up", down: "Move down", del: "Delete", add_sub: "Add to submenu", add_tab: "Add a tab",
+      sub_title: "Submenu", sub_hold_tab: "Opens on long press on the tab.", sub_tap_tab: "Opens on tap (tab without a view).",
+      sub_hold_tile: "Opens on long press on the tile.", sub_tap_tile: "Opens on tap (tile without a view or action).",
+      tab_n: (n) => `Tab ${n}`, item_n: (n) => `Item ${n}`, n_sub: (n) => `${n} submenu item${n > 1 ? "s" : ""}`, n_cards: (n) => `${n} card${n > 1 ? "s" : ""}`,
+      exp_tile: "Action / entity (live tile)", exp_tab: "Badge, image, visibility",
+      cards_title: "Cards", cards_hint: "Lovelace cards shown in the panel (thermostat, camera, graph…).",
+      add_card: "Add a card", pick_card: "Pick a card type:", cancel: "Cancel", code_editor: "Code editor", visual_editor: "Visual editor",
+      loading: "Loading the card editor…",
+    },
+    de: {
+      f_panel_width: "Panelbreite", f_cards_columns: "Karten pro Zeile", f_span: "Kartenbreite", o_pw_auto: "Automatisch", o_pw_narrow: "Schmal", o_pw_normal: "Normal", o_pw_large: "Breit", o_pw_xlarge: "Sehr breit", o_pw_full: "Volle Bildschirmbreite", o_cols: (n) => `${n} pro Zeile`, o_span: (n) => `${n} Spalte${n > 1 ? "n" : ""}`, o_span_full: "Ganze Zeile", size_hint: "Größe: Panelbreite, Anzahl der Karten pro Zeile und Breite jeder Karte.",
+      playing: "Läuft gerade", no_playing: "Keine Wiedergabe",
+      need_music: "Die Karte <b>HOLM Music Card</b> wird benötigt, um die Player hier anzuzeigen. Installiere sie über HACS (kaaribou/holm-music-card).",
+      start_music: "Starte Musik in Music Assistant, sie erscheint dann hier.",
+      back: "Zurück", preview_title: "HOLM-Navigationsleiste", master: "Hauptkarte", common: "gemeinsame Konfiguration", no_tabs: "keine Tabs",
+      edit_master: "Klicke auf diese Karte (Stift), um die Tabs aller Ansichten zu bearbeiten.",
+      edit_common: "Diese Ansicht verwendet die Leiste der Hauptkarte (die mit den Tabs).",
+      preview_note: "Die Leiste wird unten am Bildschirm angezeigt.",
+      card_desc: "Schwebende, animierte Glas-Navigationsleiste für alle Ansichten.", home: "Start", lights: "Licht",
+      f_music_entity: "Music-Assistant-Miniplayer (über der Leiste)", f_music_show: "Miniplayer anzeigen", f_music_artwork: "Cover-Stil im Player",
+      f_labels: "Beschriftungen", f_desktop_position: "Position am Computer", f_mobile_style: "Auf dem Handy", f_auto_hide: "Beim Scrollen ausblenden", f_haptic: "Vibration", f_accent: "Hauptfarbe",
+      f_label: "Beschriftung", f_icon: "Symbol", f_url: "Zu öffnende Ansicht", f_color: "Farbe (#hex oder Name)", f_image: "Bild (ersetzt das Symbol)", f_entity: "Entität (Zustand auf der Kachel)",
+      f_action: "Beim Tippen", f_perform_action: "Aktion (z. B. script.gute_nacht)", f_badge_entities: "Plakette: aktive Entitäten zählen", f_users: "Nur sichtbar für (Benutzername)",
+      f_music: "Musiknote bei Wiedergabe + Player bei langem Drücken", f_music_players: "Überwachte Player (leer = alle von Music Assistant)",
+      f_label_lines: "Zeilen der Beschriftung", f_language: "Sprache", f_cards_position: "Position der Karten",
+      o_active: "Aktiver Tab", o_all: "Alle", o_none: "Keine", o_docked: "Unten angedockt", o_floating: "Schwebend", o_bottom: "Unten", o_left: "Links", o_right: "Rechts", o_hidden: "Ausgeblendet",
+      o_only_playing: "Nur während der Wiedergabe", o_always: "Immer", o_cover: "Cover", o_vinyl: "Vinyl",
+      o_lines1: "1 Zeile", o_lines2: "2 Zeilen", o_lines3: "3 Zeilen", o_lines0: "Unbegrenzt", o_auto: "Automatisch (Sprache von Home Assistant)", o_top: "Über den Kacheln", o_below: "Unter den Kacheln",
+      a_navigate: "Ansicht öffnen", a_toggle: "Entität umschalten", a_more_info: "Entitätsdetails", a_perform: "Aktion ausführen",
+      sec_music: "Musik-Miniplayer", sec_tabs: "Tabs der Leiste",
+      warn_music: "⚠️ Die Musikfunktionen (Miniplayer, Musiknote, Player bei langem Drücken) benötigen die <b>HOLM Music Card</b> und die Integration <b>Music Assistant</b>. Installiere <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> über HACS und lade die Seite neu.",
+      note_common: "Diese Karte verwendet die <b>gemeinsame Leiste</b> der Hauptkarte (die mit den Tabs). Um die Tabs zu ändern, bearbeite die Hauptkarte.",
+      tip_tabs: "Ein Tab mit einer <b>Ansicht</b> öffnet sie beim Tippen; sein <b>Untermenü</b> öffnet sich bei langem Drücken. Ein Tab <b>ohne Ansicht</b> öffnet direkt sein Untermenü. Auch Kacheln eines Untermenüs können ein Untermenü und Karten haben.",
+      up: "Nach oben", down: "Nach unten", del: "Löschen", add_sub: "Zum Untermenü hinzufügen", add_tab: "Tab hinzufügen",
+      sub_title: "Untermenü", sub_hold_tab: "Öffnet sich bei langem Drücken auf den Tab.", sub_tap_tab: "Öffnet sich beim Tippen (Tab ohne Ansicht).",
+      sub_hold_tile: "Öffnet sich bei langem Drücken auf die Kachel.", sub_tap_tile: "Öffnet sich beim Tippen (Kachel ohne Ansicht oder Aktion).",
+      tab_n: (n) => `Tab ${n}`, item_n: (n) => `Element ${n}`, n_sub: (n) => `${n} Untermenü-Element${n > 1 ? "e" : ""}`, n_cards: (n) => `${n} Karte${n > 1 ? "n" : ""}`,
+      exp_tile: "Aktion / Entität (dynamische Kachel)", exp_tab: "Plakette, Bild, Sichtbarkeit",
+      cards_title: "Karten", cards_hint: "Lovelace-Karten im Panel (Thermostat, Kamera, Diagramm…).",
+      add_card: "Karte hinzufügen", pick_card: "Kartentyp wählen:", cancel: "Abbrechen", code_editor: "Code-Editor", visual_editor: "Visueller Editor",
+      loading: "Karteneditor wird geladen…",
+    },
+    es: {
+      f_panel_width: "Ancho del panel", f_cards_columns: "Tarjetas por fila", f_span: "Ancho de la tarjeta", o_pw_auto: "Automático", o_pw_narrow: "Estrecho", o_pw_normal: "Normal", o_pw_large: "Ancho", o_pw_xlarge: "Muy ancho", o_pw_full: "Todo el ancho de la pantalla", o_cols: (n) => `${n} por fila`, o_span: (n) => `${n} columna${n > 1 ? "s" : ""}`, o_span_full: "Toda la fila", size_hint: "Tamaño: ancho del panel, número de tarjetas por fila y ancho de cada tarjeta.",
+      playing: "Reproduciendo ahora", no_playing: "Nada en reproducción",
+      need_music: "Se necesita la tarjeta <b>HOLM Music Card</b> para mostrar los reproductores aquí. Instálala desde HACS (kaaribou/holm-music-card).",
+      start_music: "Pon música desde Music Assistant y aparecerá aquí.",
+      back: "Volver", preview_title: "Barra de navegación HOLM", master: "tarjeta principal", common: "configuración común", no_tabs: "sin pestañas",
+      edit_master: "Haz clic en esta tarjeta (lápiz) para editar las pestañas de todas las vistas.",
+      edit_common: "Esta vista reutiliza la barra definida en la tarjeta principal (la que contiene las pestañas).",
+      preview_note: "La barra se muestra en la parte inferior de la pantalla.",
+      card_desc: "Barra de navegación flotante de cristal, animada, común a todas las vistas.", home: "Inicio", lights: "Luces",
+      f_music_entity: "Mini reproductor de Music Assistant (encima de la barra)", f_music_show: "Mostrar el mini reproductor", f_music_artwork: "Estilo de carátula en el reproductor",
+      f_labels: "Etiquetas", f_desktop_position: "Posición en ordenador", f_mobile_style: "En el móvil", f_auto_hide: "Ocultar al desplazar", f_haptic: "Vibración", f_accent: "Color principal",
+      f_label: "Etiqueta", f_icon: "Icono", f_url: "Vista que abrir", f_color: "Color (#hex o nombre)", f_image: "Imagen (sustituye al icono)", f_entity: "Entidad (estado mostrado en el mosaico)",
+      f_action: "Al tocar", f_perform_action: "Acción (p. ej. script.buenas_noches)", f_badge_entities: "Indicador: contar entidades activas", f_users: "Visible solo para (nombre de usuario)",
+      f_music: "Nota musical si hay reproducción + reproductores con pulsación larga", f_music_players: "Reproductores vigilados (vacío = todos los de Music Assistant)",
+      f_label_lines: "Líneas de las etiquetas", f_language: "Idioma", f_cards_position: "Posición de las tarjetas",
+      o_active: "Pestaña activa", o_all: "Todas", o_none: "Ninguna", o_docked: "Fija abajo", o_floating: "Flotante", o_bottom: "Abajo", o_left: "A la izquierda", o_right: "A la derecha", o_hidden: "Oculta",
+      o_only_playing: "Solo durante la reproducción", o_always: "Siempre", o_cover: "Carátula", o_vinyl: "Vinilo",
+      o_lines1: "1 línea", o_lines2: "2 líneas", o_lines3: "3 líneas", o_lines0: "Sin límite", o_auto: "Automático (idioma de Home Assistant)", o_top: "Encima de los mosaicos", o_below: "Debajo de los mosaicos",
+      a_navigate: "Ir a una vista", a_toggle: "Alternar la entidad", a_more_info: "Ficha de la entidad", a_perform: "Ejecutar una acción",
+      sec_music: "Mini reproductor de música", sec_tabs: "Pestañas de la barra",
+      warn_music: "⚠️ Las funciones de música (mini reproductor, nota musical, reproductores con pulsación larga) necesitan la tarjeta <b>HOLM Music Card</b> y la integración <b>Music Assistant</b>. Instala <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> desde HACS y recarga la página.",
+      note_common: "Esta tarjeta reutiliza la <b>barra común</b> definida en la tarjeta principal (la que contiene las pestañas). Para cambiar las pestañas, edita la tarjeta principal.",
+      tip_tabs: "Una pestaña con una <b>vista</b> la abre al tocar; su <b>submenú</b> se abre con una pulsación larga. Una pestaña <b>sin vista</b> abre directamente su submenú. Los mosaicos de un submenú también pueden tener su propio submenú y tarjetas.",
+      up: "Subir", down: "Bajar", del: "Eliminar", add_sub: "Añadir al submenú", add_tab: "Añadir una pestaña",
+      sub_title: "Submenú", sub_hold_tab: "Se abre con una pulsación larga en la pestaña.", sub_tap_tab: "Se abre al tocar (pestaña sin vista).",
+      sub_hold_tile: "Se abre con una pulsación larga en el mosaico.", sub_tap_tile: "Se abre al tocar (mosaico sin vista ni acción).",
+      tab_n: (n) => `Pestaña ${n}`, item_n: (n) => `Elemento ${n}`, n_sub: (n) => `${n} elemento${n > 1 ? "s" : ""} de submenú`, n_cards: (n) => `${n} tarjeta${n > 1 ? "s" : ""}`,
+      exp_tile: "Acción / entidad (mosaico dinámico)", exp_tab: "Indicador, imagen, visibilidad",
+      cards_title: "Tarjetas", cards_hint: "Tarjetas Lovelace mostradas en el panel (termostato, cámara, gráfico…).",
+      add_card: "Añadir una tarjeta", pick_card: "Elige el tipo de tarjeta:", cancel: "Cancelar", code_editor: "Editor de código", visual_editor: "Editor visual",
+      loading: "Cargando el editor de tarjetas…",
+    },
+    it: {
+      f_panel_width: "Larghezza del pannello", f_cards_columns: "Schede per riga", f_span: "Larghezza della scheda", o_pw_auto: "Automatica", o_pw_narrow: "Stretto", o_pw_normal: "Normale", o_pw_large: "Largo", o_pw_xlarge: "Molto largo", o_pw_full: "Tutta la larghezza dello schermo", o_cols: (n) => `${n} per riga`, o_span: (n) => `${n} colonn${n > 1 ? "e" : "a"}`, o_span_full: "Tutta la riga", size_hint: "Dimensioni: larghezza del pannello, numero di schede per riga e larghezza di ogni scheda.",
+      playing: "In riproduzione", no_playing: "Nessuna riproduzione",
+      need_music: "Serve la scheda <b>HOLM Music Card</b> per mostrare qui i lettori. Installala da HACS (kaaribou/holm-music-card).",
+      start_music: "Avvia della musica da Music Assistant e comparirà qui.",
+      back: "Indietro", preview_title: "Barra di navigazione HOLM", master: "scheda principale", common: "configurazione comune", no_tabs: "nessuna scheda",
+      edit_master: "Fai clic su questa scheda (matita) per modificare le schede di tutte le viste.",
+      edit_common: "Questa vista riutilizza la barra definita sulla scheda principale (quella con le schede).",
+      preview_note: "La barra viene mostrata in fondo allo schermo.",
+      card_desc: "Barra di navigazione fluttuante in vetro, animata, comune a tutte le viste.", home: "Home", lights: "Luci",
+      f_music_entity: "Mini lettore Music Assistant (sopra la barra)", f_music_show: "Mostra il mini lettore", f_music_artwork: "Stile della copertina nel lettore",
+      f_labels: "Etichette", f_desktop_position: "Posizione su computer", f_mobile_style: "Su smartphone", f_auto_hide: "Nascondi scorrendo", f_haptic: "Vibrazione", f_accent: "Colore principale",
+      f_label: "Etichetta", f_icon: "Icona", f_url: "Vista da aprire", f_color: "Colore (#hex o nome)", f_image: "Immagine (sostituisce l'icona)", f_entity: "Entità (stato mostrato sul riquadro)",
+      f_action: "Al tocco", f_perform_action: "Azione (es. script.buonanotte)", f_badge_entities: "Badge: conta le entità attive", f_users: "Visibile solo per (nome utente)",
+      f_music: "Nota musicale durante la riproduzione + lettori con pressione lunga", f_music_players: "Lettori monitorati (vuoto = tutti quelli di Music Assistant)",
+      f_label_lines: "Righe delle etichette", f_language: "Lingua", f_cards_position: "Posizione delle schede",
+      o_active: "Scheda attiva", o_all: "Tutte", o_none: "Nessuna", o_docked: "Ancorata in basso", o_floating: "Fluttuante", o_bottom: "In basso", o_left: "A sinistra", o_right: "A destra", o_hidden: "Nascosta",
+      o_only_playing: "Solo durante la riproduzione", o_always: "Sempre", o_cover: "Copertina", o_vinyl: "Vinile",
+      o_lines1: "1 riga", o_lines2: "2 righe", o_lines3: "3 righe", o_lines0: "Illimitate", o_auto: "Automatica (lingua di Home Assistant)", o_top: "Sopra i riquadri", o_below: "Sotto i riquadri",
+      a_navigate: "Vai a una vista", a_toggle: "Commuta l'entità", a_more_info: "Dettagli dell'entità", a_perform: "Esegui un'azione",
+      sec_music: "Mini lettore musicale", sec_tabs: "Schede della barra",
+      warn_music: "⚠️ Le funzioni musicali (mini lettore, nota musicale, lettori con pressione lunga) richiedono la scheda <b>HOLM Music Card</b> e l'integrazione <b>Music Assistant</b>. Installa <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> da HACS e ricarica la pagina.",
+      note_common: "Questa scheda riutilizza la <b>barra comune</b> definita sulla scheda principale (quella con le schede). Per modificare le schede, modifica la scheda principale.",
+      tip_tabs: "Una scheda con una <b>vista</b> la apre al tocco; il suo <b>sottomenu</b> si apre con una pressione lunga. Una scheda <b>senza vista</b> apre direttamente il sottomenu. Anche i riquadri di un sottomenu possono avere un sottomenu e delle schede.",
+      up: "Su", down: "Giù", del: "Elimina", add_sub: "Aggiungi al sottomenu", add_tab: "Aggiungi una scheda",
+      sub_title: "Sottomenu", sub_hold_tab: "Si apre con una pressione lunga sulla scheda.", sub_tap_tab: "Si apre al tocco (scheda senza vista).",
+      sub_hold_tile: "Si apre con una pressione lunga sul riquadro.", sub_tap_tile: "Si apre al tocco (riquadro senza vista né azione).",
+      tab_n: (n) => `Scheda ${n}`, item_n: (n) => `Elemento ${n}`, n_sub: (n) => `${n} element${n > 1 ? "i" : "o"} di sottomenu`, n_cards: (n) => `${n} sched${n > 1 ? "e" : "a"}`,
+      exp_tile: "Azione / entità (riquadro dinamico)", exp_tab: "Badge, immagine, visibilità",
+      cards_title: "Schede", cards_hint: "Schede Lovelace mostrate nel pannello (termostato, telecamera, grafico…).",
+      add_card: "Aggiungi una scheda", pick_card: "Scegli il tipo di scheda:", cancel: "Annulla", code_editor: "Editor di codice", visual_editor: "Editor visivo",
+      loading: "Caricamento dell'editor delle schede…",
+    },
+    nl: {
+      f_panel_width: "Breedte van het paneel", f_cards_columns: "Kaarten per rij", f_span: "Breedte van de kaart", o_pw_auto: "Automatisch", o_pw_narrow: "Smal", o_pw_normal: "Normaal", o_pw_large: "Breed", o_pw_xlarge: "Extra breed", o_pw_full: "Volledige schermbreedte", o_cols: (n) => `${n} per rij`, o_span: (n) => `${n} kolom${n > 1 ? "men" : ""}`, o_span_full: "Hele rij", size_hint: "Grootte: breedte van het paneel, aantal kaarten per rij en breedte van elke kaart.",
+      playing: "Nu aan het spelen", no_playing: "Er speelt niets",
+      need_music: "De kaart <b>HOLM Music Card</b> is nodig om hier spelers te tonen. Installeer hem via HACS (kaaribou/holm-music-card).",
+      start_music: "Start muziek in Music Assistant, dan verschijnt die hier.",
+      back: "Terug", preview_title: "HOLM-navigatiebalk", master: "hoofdkaart", common: "gedeelde configuratie", no_tabs: "geen tabbladen",
+      edit_master: "Klik op deze kaart (potlood) om de tabbladen van alle weergaven te bewerken.",
+      edit_common: "Deze weergave gebruikt de balk van de hoofdkaart (die met de tabbladen).",
+      preview_note: "De balk verschijnt onderaan het scherm.",
+      card_desc: "Zwevende, geanimeerde glazen navigatiebalk voor alle weergaven.", home: "Start", lights: "Lampen",
+      f_music_entity: "Music Assistant-minispeler (boven de balk)", f_music_show: "Minispeler tonen", f_music_artwork: "Hoesstijl in de speler",
+      f_labels: "Labels", f_desktop_position: "Positie op computer", f_mobile_style: "Op mobiel", f_auto_hide: "Verbergen bij scrollen", f_haptic: "Trilling", f_accent: "Hoofdkleur",
+      f_label: "Label", f_icon: "Pictogram", f_url: "Te openen weergave", f_color: "Kleur (#hex of naam)", f_image: "Afbeelding (vervangt het pictogram)", f_entity: "Entiteit (status op de tegel)",
+      f_action: "Bij tikken", f_perform_action: "Actie (bijv. script.welterusten)", f_badge_entities: "Badge: actieve entiteiten tellen", f_users: "Alleen zichtbaar voor (gebruikersnaam)",
+      f_music: "Muzieknoot tijdens afspelen + spelers bij lang indrukken", f_music_players: "Gevolgde spelers (leeg = alle van Music Assistant)",
+      f_label_lines: "Regels van de labels", f_language: "Taal", f_cards_position: "Positie van de kaarten",
+      o_active: "Actief tabblad", o_all: "Alle", o_none: "Geen", o_docked: "Onderaan vast", o_floating: "Zwevend", o_bottom: "Onderaan", o_left: "Links", o_right: "Rechts", o_hidden: "Verborgen",
+      o_only_playing: "Alleen tijdens afspelen", o_always: "Altijd", o_cover: "Hoes", o_vinyl: "Vinyl",
+      o_lines1: "1 regel", o_lines2: "2 regels", o_lines3: "3 regels", o_lines0: "Onbeperkt", o_auto: "Automatisch (taal van Home Assistant)", o_top: "Boven de tegels", o_below: "Onder de tegels",
+      a_navigate: "Naar een weergave", a_toggle: "Entiteit omschakelen", a_more_info: "Details van de entiteit", a_perform: "Actie uitvoeren",
+      sec_music: "Muziek-minispeler", sec_tabs: "Tabbladen van de balk",
+      warn_music: "⚠️ De muziekfuncties (minispeler, muzieknoot, spelers bij lang indrukken) vereisen de <b>HOLM Music Card</b> en de integratie <b>Music Assistant</b>. Installeer <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> via HACS en herlaad de pagina.",
+      note_common: "Deze kaart gebruikt de <b>gedeelde balk</b> van de hoofdkaart (die met de tabbladen). Bewerk de hoofdkaart om de tabbladen te wijzigen.",
+      tip_tabs: "Een tabblad met een <b>weergave</b> opent die bij tikken; het <b>submenu</b> opent bij lang indrukken. Een tabblad <b>zonder weergave</b> opent meteen het submenu. Tegels in een submenu kunnen ook een eigen submenu en kaarten hebben.",
+      up: "Omhoog", down: "Omlaag", del: "Verwijderen", add_sub: "Toevoegen aan submenu", add_tab: "Tabblad toevoegen",
+      sub_title: "Submenu", sub_hold_tab: "Opent bij lang indrukken op het tabblad.", sub_tap_tab: "Opent bij tikken (tabblad zonder weergave).",
+      sub_hold_tile: "Opent bij lang indrukken op de tegel.", sub_tap_tile: "Opent bij tikken (tegel zonder weergave of actie).",
+      tab_n: (n) => `Tabblad ${n}`, item_n: (n) => `Item ${n}`, n_sub: (n) => `${n} submenu-item${n > 1 ? "s" : ""}`, n_cards: (n) => `${n} kaart${n > 1 ? "en" : ""}`,
+      exp_tile: "Actie / entiteit (dynamische tegel)", exp_tab: "Badge, afbeelding, zichtbaarheid",
+      cards_title: "Kaarten", cards_hint: "Lovelace-kaarten in het paneel (thermostaat, camera, grafiek…).",
+      add_card: "Kaart toevoegen", pick_card: "Kies het type kaart:", cancel: "Annuleren", code_editor: "Code-editor", visual_editor: "Visuele editor",
+      loading: "Kaarteditor laden…",
+    },
+    pt: {
+      f_panel_width: "Largura do painel", f_cards_columns: "Cartões por linha", f_span: "Largura do cartão", o_pw_auto: "Automática", o_pw_narrow: "Estreito", o_pw_normal: "Normal", o_pw_large: "Largo", o_pw_xlarge: "Muito largo", o_pw_full: "Toda a largura do ecrã", o_cols: (n) => `${n} por linha`, o_span: (n) => `${n} coluna${n > 1 ? "s" : ""}`, o_span_full: "Linha inteira", size_hint: "Tamanho: largura do painel, número de cartões por linha e largura de cada cartão.",
+      playing: "A tocar agora", no_playing: "Nada a tocar",
+      need_music: "É necessário o cartão <b>HOLM Music Card</b> para mostrar aqui os leitores. Instala-o a partir do HACS (kaaribou/holm-music-card).",
+      start_music: "Põe música no Music Assistant e ela aparecerá aqui.",
+      back: "Voltar", preview_title: "Barra de navegação HOLM", master: "cartão principal", common: "configuração comum", no_tabs: "sem separadores",
+      edit_master: "Clica neste cartão (lápis) para editar os separadores de todas as vistas.",
+      edit_common: "Esta vista reutiliza a barra definida no cartão principal (o que contém os separadores).",
+      preview_note: "A barra é mostrada na parte inferior do ecrã.",
+      card_desc: "Barra de navegação flutuante em vidro, animada, comum a todas as vistas.", home: "Início", lights: "Luzes",
+      f_music_entity: "Mini leitor do Music Assistant (acima da barra)", f_music_show: "Mostrar o mini leitor", f_music_artwork: "Estilo da capa no leitor",
+      f_labels: "Etiquetas", f_desktop_position: "Posição no computador", f_mobile_style: "No telemóvel", f_auto_hide: "Ocultar ao deslizar", f_haptic: "Vibração", f_accent: "Cor principal",
+      f_label: "Etiqueta", f_icon: "Ícone", f_url: "Vista a abrir", f_color: "Cor (#hex ou nome)", f_image: "Imagem (substitui o ícone)", f_entity: "Entidade (estado mostrado no mosaico)",
+      f_action: "Ao tocar", f_perform_action: "Ação (ex. script.boa_noite)", f_badge_entities: "Indicador: contar entidades ativas", f_users: "Visível apenas para (nome de utilizador)",
+      f_music: "Nota musical durante a reprodução + leitores com toque longo", f_music_players: "Leitores vigiados (vazio = todos os do Music Assistant)",
+      f_label_lines: "Linhas das etiquetas", f_language: "Idioma", f_cards_position: "Posição dos cartões",
+      o_active: "Separador ativo", o_all: "Todos", o_none: "Nenhum", o_docked: "Fixa em baixo", o_floating: "Flutuante", o_bottom: "Em baixo", o_left: "À esquerda", o_right: "À direita", o_hidden: "Oculta",
+      o_only_playing: "Só durante a reprodução", o_always: "Sempre", o_cover: "Capa", o_vinyl: "Vinil",
+      o_lines1: "1 linha", o_lines2: "2 linhas", o_lines3: "3 linhas", o_lines0: "Ilimitado", o_auto: "Automático (idioma do Home Assistant)", o_top: "Acima dos mosaicos", o_below: "Abaixo dos mosaicos",
+      a_navigate: "Ir para uma vista", a_toggle: "Alternar a entidade", a_more_info: "Detalhes da entidade", a_perform: "Executar uma ação",
+      sec_music: "Mini leitor de música", sec_tabs: "Separadores da barra",
+      warn_music: "⚠️ As funções de música (mini leitor, nota musical, leitores com toque longo) requerem o cartão <b>HOLM Music Card</b> e a integração <b>Music Assistant</b>. Instala <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> a partir do HACS e recarrega a página.",
+      note_common: "Este cartão reutiliza a <b>barra comum</b> definida no cartão principal (o que contém os separadores). Para mudar os separadores, edita o cartão principal.",
+      tip_tabs: "Um separador com uma <b>vista</b> abre-a ao tocar; o seu <b>submenu</b> abre com um toque longo. Um separador <b>sem vista</b> abre diretamente o submenu. Os mosaicos de um submenu também podem ter o seu próprio submenu e cartões.",
+      up: "Subir", down: "Descer", del: "Eliminar", add_sub: "Adicionar ao submenu", add_tab: "Adicionar um separador",
+      sub_title: "Submenu", sub_hold_tab: "Abre com um toque longo no separador.", sub_tap_tab: "Abre ao tocar (separador sem vista).",
+      sub_hold_tile: "Abre com um toque longo no mosaico.", sub_tap_tile: "Abre ao tocar (mosaico sem vista nem ação).",
+      tab_n: (n) => `Separador ${n}`, item_n: (n) => `Elemento ${n}`, n_sub: (n) => `${n} elemento${n > 1 ? "s" : ""} de submenu`, n_cards: (n) => `${n} cart${n > 1 ? "ões" : "ão"}`,
+      exp_tile: "Ação / entidade (mosaico dinâmico)", exp_tab: "Indicador, imagem, visibilidade",
+      cards_title: "Cartões", cards_hint: "Cartões Lovelace mostrados no painel (termóstato, câmara, gráfico…).",
+      add_card: "Adicionar um cartão", pick_card: "Escolhe o tipo de cartão:", cancel: "Cancelar", code_editor: "Editor de código", visual_editor: "Editor visual",
+      loading: "A carregar o editor de cartões…",
+    },
+    pl: {
+      f_panel_width: "Szerokość panelu", f_cards_columns: "Kart w wierszu", f_span: "Szerokość karty", o_pw_auto: "Automatycznie", o_pw_narrow: "Wąski", o_pw_normal: "Normalny", o_pw_large: "Szeroki", o_pw_xlarge: "Bardzo szeroki", o_pw_full: "Cała szerokość ekranu", o_cols: (n) => `${n} w wierszu`, o_span: (n) => `kolumny: ${n}`, o_span_full: "Cały wiersz", size_hint: "Rozmiar: szerokość panelu, liczba kart w wierszu i szerokość każdej karty.",
+      playing: "Teraz odtwarzane", no_playing: "Nic nie jest odtwarzane",
+      need_music: "Do wyświetlania odtwarzaczy potrzebna jest karta <b>HOLM Music Card</b>. Zainstaluj ją z HACS (kaaribou/holm-music-card).",
+      start_music: "Włącz muzykę w Music Assistant, a pojawi się tutaj.",
+      back: "Wstecz", preview_title: "Pasek nawigacji HOLM", master: "karta główna", common: "wspólna konfiguracja", no_tabs: "brak zakładek",
+      edit_master: "Kliknij tę kartę (ołówek), aby edytować zakładki wszystkich widoków.",
+      edit_common: "Ten widok używa paska zdefiniowanego na karcie głównej (tej z zakładkami).",
+      preview_note: "Pasek jest wyświetlany na dole ekranu.",
+      card_desc: "Pływający, animowany szklany pasek nawigacji wspólny dla wszystkich widoków.", home: "Start", lights: "Światła",
+      f_music_entity: "Miniodtwarzacz Music Assistant (nad paskiem)", f_music_show: "Pokaż miniodtwarzacz", f_music_artwork: "Styl okładki w odtwarzaczu",
+      f_labels: "Etykiety", f_desktop_position: "Pozycja na komputerze", f_mobile_style: "Na telefonie", f_auto_hide: "Ukryj podczas przewijania", f_haptic: "Wibracje", f_accent: "Kolor główny",
+      f_label: "Etykieta", f_icon: "Ikona", f_url: "Widok do otwarcia", f_color: "Kolor (#hex lub nazwa)", f_image: "Obraz (zastępuje ikonę)", f_entity: "Encja (stan na kafelku)",
+      f_action: "Po dotknięciu", f_perform_action: "Akcja (np. script.dobranoc)", f_badge_entities: "Plakietka: licz aktywne encje", f_users: "Widoczne tylko dla (nazwa użytkownika)",
+      f_music: "Nuta podczas odtwarzania + odtwarzacze po długim naciśnięciu", f_music_players: "Obserwowane odtwarzacze (puste = wszystkie z Music Assistant)",
+      f_label_lines: "Wiersze etykiet", f_language: "Język", f_cards_position: "Pozycja kart",
+      o_active: "Aktywna zakładka", o_all: "Wszystkie", o_none: "Brak", o_docked: "Zadokowany na dole", o_floating: "Pływający", o_bottom: "Na dole", o_left: "Po lewej", o_right: "Po prawej", o_hidden: "Ukryty",
+      o_only_playing: "Tylko podczas odtwarzania", o_always: "Zawsze", o_cover: "Okładka", o_vinyl: "Winyl",
+      o_lines1: "1 wiersz", o_lines2: "2 wiersze", o_lines3: "3 wiersze", o_lines0: "Bez limitu", o_auto: "Automatycznie (język Home Assistant)", o_top: "Nad kafelkami", o_below: "Pod kafelkami",
+      a_navigate: "Przejdź do widoku", a_toggle: "Przełącz encję", a_more_info: "Szczegóły encji", a_perform: "Uruchom akcję",
+      sec_music: "Miniodtwarzacz muzyki", sec_tabs: "Zakładki paska",
+      warn_music: "⚠️ Funkcje muzyczne (miniodtwarzacz, nuta, odtwarzacze po długim naciśnięciu) wymagają karty <b>HOLM Music Card</b> i integracji <b>Music Assistant</b>. Zainstaluj <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> z HACS i odśwież stronę.",
+      note_common: "Ta karta używa <b>wspólnego paska</b> zdefiniowanego na karcie głównej (tej z zakładkami). Aby zmienić zakładki, edytuj kartę główną.",
+      tip_tabs: "Zakładka z <b>widokiem</b> otwiera go po dotknięciu; jej <b>podmenu</b> otwiera się po długim naciśnięciu. Zakładka <b>bez widoku</b> od razu otwiera podmenu. Kafelki podmenu też mogą mieć własne podmenu i karty.",
+      up: "W górę", down: "W dół", del: "Usuń", add_sub: "Dodaj do podmenu", add_tab: "Dodaj zakładkę",
+      sub_title: "Podmenu", sub_hold_tab: "Otwiera się po długim naciśnięciu zakładki.", sub_tap_tab: "Otwiera się po dotknięciu (zakładka bez widoku).",
+      sub_hold_tile: "Otwiera się po długim naciśnięciu kafelka.", sub_tap_tile: "Otwiera się po dotknięciu (kafelek bez widoku i akcji).",
+      tab_n: (n) => `Zakładka ${n}`, item_n: (n) => `Element ${n}`, n_sub: (n) => `elementy podmenu: ${n}`, n_cards: (n) => `karty: ${n}`,
+      exp_tile: "Akcja / encja (dynamiczny kafelek)", exp_tab: "Plakietka, obraz, widoczność",
+      cards_title: "Karty", cards_hint: "Karty Lovelace wyświetlane w panelu (termostat, kamera, wykres…).",
+      add_card: "Dodaj kartę", pick_card: "Wybierz typ karty:", cancel: "Anuluj", code_editor: "Edytor kodu", visual_editor: "Edytor wizualny",
+      loading: "Ładowanie edytora kart…",
+    },
+  };
+  const LANG_NAMES = { fr: "Français", en: "English", de: "Deutsch", es: "Español", it: "Italiano", nl: "Nederlands", pt: "Português", pl: "Polski" };
+  const langOf = (cfg, hass) => {
+    let l = cfg && cfg.language && cfg.language !== "auto" ? cfg.language
+      : (hass && ((hass.locale && hass.locale.language) || hass.language)) || document.documentElement.lang || navigator.language || "en";
+    l = String(l).slice(0, 2).toLowerCase();
+    return I18N[l] ? l : "en";
+  };
+  const tr = (lang, key, ...args) => {
+    const v = (I18N[lang] && I18N[lang][key]) ?? I18N.en[key] ?? key;
+    return typeof v === "function" ? v(...args) : v;
+  };
 
   const colorOf = (c, fallback) => {
     if (!c) return fallback;
@@ -34,6 +312,8 @@
     const p = norm(decodeURI(location.pathname)), u = norm(url);
     return p === u || p.startsWith(u + "/");
   };
+  const anyMatch = (items, depth = 0) => (items || []).some((p) => matches(routeUrl(p)) || (depth < MAX_DEPTH && anyMatch(p.popup, depth + 1)));
+  const hasLevel = (it) => !!((it.popup && it.popup.length) || (it.cards && it.cards.length));
   const userOk = (item, hass) => {
     if (!item.users || !item.users.length) return true;
     const u = hass && hass.user;
@@ -46,6 +326,10 @@
     history[replace ? "replaceState" : "pushState"](null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace } }));
   };
+  const linesOf = (c) => {
+    const n = c && c.label_lines != null ? parseInt(c.label_lines, 10) : 2;
+    return isNaN(n) || n < 0 ? 2 : n;
+  };
 
   // ------------------------------------------------------------------
   //  Barre globale (un seul élément posé sur <body>)
@@ -56,13 +340,30 @@
       this.attachShadow({ mode: "open" });
       this.shadowRoot.innerHTML = `<style>${HolmNavbarBar.css()}</style>
         <div class="scrim" id="scrim"></div>
-        <div class="pop" id="pop"><div class="pop-h" id="poph"></div><div class="players" id="players"></div><div class="grid" id="grid"></div></div>
+        <div class="pop" id="pop"><div class="pop-h" id="poph"></div>
+          <div class="body" id="body"><div class="players" id="players"></div><div class="cards" id="cards"></div><div class="grid" id="grid"></div></div></div>
         <div class="music" id="music"></div>
         <nav class="dock" id="dock"><div class="bubble" id="bubble"></div><div class="items" id="items"></div></nav>`;
       this.$ = (id) => this.shadowRoot.getElementById(id);
       this.$("scrim").addEventListener("click", () => this.closePop());
+      // les cartes du panneau vivent hors de l'arbre de Home Assistant : on relaie leurs évènements
+      // (actions au toucher, fiches d'entité, boîtes de dialogue…) vers <home-assistant>
+      ["hass-action", "hass-more-info", "show-dialog", "hass-notification", "ll-custom", "hass-toggle"].forEach((type) => {
+        this.$("cards").addEventListener(type, (e) => {
+          if (e.__holmFwd) return;
+          const ha = document.querySelector("home-assistant");
+          if (!ha) return;
+          e.stopPropagation();
+          const ne = new CustomEvent(type, { bubbles: true, composed: true, cancelable: e.cancelable, detail: e.detail });
+          ne.__holmFwd = true;
+          ha.dispatchEvent(ne);
+        });
+      });
+      this._stack = [];
+      this._cardCache = new Map();
       this._onLoc = () => { this.closePop(); this.render(); this._checkScope(); };
       this._onResize = () => { this._layout(); this._place(); };
+      this._onKey = (e) => { if (e.key === "Escape" && this.classList.contains("open")) { if (this._stack.length > 1) this._back(); else this.closePop(); } };
       this._lastY = 0;
       this._onScroll = (e) => {
         if (!this.config || !this.config.auto_hide) return;
@@ -73,16 +374,19 @@
         this._lastY = y;
       };
     }
+    t(key, ...a) { return tr(langOf(this.config, this.hass), key, ...a); }
     connectedCallback() {
       window.addEventListener("location-changed", this._onLoc);
       window.addEventListener("popstate", this._onLoc);
       window.addEventListener("resize", this._onResize);
+      window.addEventListener("keydown", this._onKey);
       document.addEventListener("scroll", this._onScroll, { capture: true, passive: true });
     }
     disconnectedCallback() {
       window.removeEventListener("location-changed", this._onLoc);
       window.removeEventListener("popstate", this._onLoc);
       window.removeEventListener("resize", this._onResize);
+      window.removeEventListener("keydown", this._onKey);
       document.removeEventListener("scroll", this._onScroll, { capture: true });
     }
     setup(config, hass, dash) {
@@ -90,7 +394,7 @@
       this.config = config;
       this.dash = dash;
       this.hass = hass;
-      if (changed) this._key = null;
+      if (changed) { this._key = null; this._cardCache.clear(); }
       this.render();
       this._music();
       this._checkScope();
@@ -167,13 +471,17 @@
       this.dataset.pos = pos;
       this.dataset.labels = this.config.labels || "active";
       this.dataset.docked = !this._desktop() && (this.config.mobile_style || "docked") === "docked" ? "1" : "0";
+      const n = linesOf(this.config);
+      this.style.setProperty("--tl-lines", n === 0 ? "99" : String(n));
+      this.style.setProperty("--lb-lines", n === 0 ? "3" : String(Math.min(n, 2)));
+      this.setAttribute("lang", langOf(this.config, this.hass));
     }
     _routes() {
       return (this.config.routes || []).filter((r) => userOk(r, this.hass));
     }
     _activeIndex(routes) {
       let idx = routes.findIndex((r) => matches(routeUrl(r)));
-      if (idx < 0) idx = routes.findIndex((r) => (r.popup || []).some((p) => matches(routeUrl(p))));
+      if (idx < 0) idx = routes.findIndex((r) => anyMatch(r.popup));
       return idx;
     }
     render() {
@@ -190,7 +498,7 @@
           b.className = "it";
           b.style.setProperty("--c", colorOf(r.color || r.icon_color, this.config.accent));
           const vis = r.image ? `<img src="${r.image}" alt="">` : `<ha-icon icon="${r.icon || "mdi:circle-outline"}"></ha-icon>`;
-          b.innerHTML = `<span class="ic">${vis}<b class="badge"></b></span><span class="lb">${r.label || ""}</span>`;
+          b.innerHTML = `<span class="ic">${vis}<b class="badge"></b></span><span class="lb${/\s/.test((r.label || "").trim()) ? " w" : ""}">${r.label || ""}</span>`;
           b.setAttribute("aria-label", r.label || routeUrl(r) || "");
           this._press(b, () => this._tap(r, b), () => this._hold(r, b));
           items.appendChild(b);
@@ -238,13 +546,13 @@
       if (a && a.action && a.action !== "navigate") return this._run(a, r, el);
       const url = routeUrl(r);
       if (url) return navigate(url);
-      if (r.popup) return this.openPop(r, el);
+      if (hasLevel(r)) return this.openPop(r, el);
     }
     _hold(r, el) {
       haptic(this.config.haptic, "medium");
       const a = r.hold_action;
       if (a && a.action && a.action !== "open-popup") return this._run(a, r, el);
-      if (r.popup || r.music) this.openPop(r, el);
+      if (hasLevel(r) || r.music) this.openPop(r, el);
     }
     // --- lecteurs Music Assistant en cours
     _maPlayers() {
@@ -267,7 +575,7 @@
     }
     _fillPlayers() {
       const box = this.$("players"), r = this._popRoute;
-      if (!r || !r.music) { if (box.firstChild) box.innerHTML = ""; box.hidden = true; return; }
+      if (!r || !r.music || this._stack.length > 1) { if (box.firstChild) { box.innerHTML = ""; box._key = null; } box.hidden = true; return; }
       box.hidden = false;
       const list = this._playing(true);
       const key = list.join(",") + "|" + !!customElements.get("holm-music-card");
@@ -278,10 +586,10 @@
         box.innerHTML = "";
         const t = document.createElement("div");
         t.className = "pl-t";
-        t.innerHTML = `<span class="eq"><i></i><i></i><i></i></span>${list.length ? `En cours de lecture <small>${list.length}</small>` : "Aucune lecture en cours"}`;
+        t.innerHTML = `<span class="eq"><i></i><i></i><i></i></span>${list.length ? `${this.t("playing")} <small>${list.length}</small>` : this.t("no_playing")}`;
         box.appendChild(t);
         if (!customElements.get("holm-music-card")) {
-          if (list.length) { const n = document.createElement("div"); n.className = "pl-e"; n.innerHTML = `<ha-icon icon="mdi:alert-circle-outline"></ha-icon><span>Le lecteur <b>HOLM Music Card</b> est nécessaire pour afficher les lecteurs ici. Installe-le depuis HACS (kaaribou/holm-music-card).</span>`; box.appendChild(n); }
+          if (list.length) { const n = document.createElement("div"); n.className = "pl-e"; n.innerHTML = `<ha-icon icon="mdi:alert-circle-outline"></ha-icon><span>${this.t("need_music")}</span>`; box.appendChild(n); }
           customElements.whenDefined("holm-music-card").then(() => this._fillPlayers());
         } else {
           list.forEach((e) => {
@@ -301,7 +609,7 @@
         if (!list.length) {
           const n = document.createElement("div");
           n.className = "pl-e";
-          n.innerHTML = `<ha-icon icon="mdi:music-note-off-outline"></ha-icon><span>Lance une musique depuis Music Assistant, elle apparaîtra ici.</span>`;
+          n.innerHTML = `<ha-icon icon="mdi:music-note-off-outline"></ha-icon><span>${this.t("start_music")}</span>`;
           box.appendChild(n);
         }
       }
@@ -311,7 +619,7 @@
       const h = this.hass;
       const ent = a.entity || item.entity;
       switch (a.action) {
-        case "open-popup": return item.popup ? this.openPop(item, el) : null;
+        case "open-popup": return hasLevel(item) ? (this.classList.contains("open") ? this._push(item) : this.openPop(item, el)) : null;
         case "navigate": return navigate(a.navigation_path);
         case "url": return window.open(a.url_path, "_blank");
         case "more-info": {
@@ -328,48 +636,149 @@
         }
       }
     }
+    // --- panneau (sous-menus imbriqués)
     openPop(r, el) {
-      const items = (r.popup || []).filter((p) => userOk(p, this.hass));
+      this._stack = [r];
       this._popRoute = r;
-      this.$("poph").innerHTML = `<ha-icon icon="${r.icon || "mdi:dots-horizontal"}"></ha-icon><span>${r.label || ""}</span>`;
-      this.$("pop").style.setProperty("--c", colorOf(r.color || r.icon_color, this.config.accent));
+      clearTimeout(this._plT);
+      const d = el.getBoundingClientRect();
+      this.$("pop").style.setProperty("--ox", `${d.left + d.width / 2}px`);
+      this._renderLevel("");
+      this.classList.add("open");
+    }
+    _push(item) {
+      if (this._stack.length >= MAX_DEPTH) return;
+      haptic(this.config.haptic, "medium");
+      this._stack.push(item);
+      this._renderLevel("fwd");
+    }
+    _back() {
+      if (this._stack.length < 2) return this.closePop();
+      haptic(this.config.haptic);
+      this._stack.pop();
+      this._renderLevel("back");
+    }
+    _levelColor() {
+      let c = this.config.accent;
+      this._stack.forEach((it) => { c = colorOf(it.color || it.icon_color, c); });
+      return c;
+    }
+    _renderLevel(dir) {
+      const lv = this._stack[this._stack.length - 1];
+      const depth = this._stack.length;
+      const pop = this.$("pop");
+      const color = this._levelColor();
+      pop.style.setProperty("--c", color);
+      // en-tête : retour + fil d'Ariane
+      const h = this.$("poph");
+      if (depth > 1) {
+        const crumbs = this._stack.map((it, i) => `<span class="${i === depth - 1 ? "cur" : "crumb"}" data-i="${i}">${it.label || ""}</span>`).join(`<i class="sep">›</i>`);
+        h.innerHTML = `<button class="bk" aria-label="${this.t("back")}"><ha-icon icon="mdi:chevron-left"></ha-icon></button><ha-icon icon="${lv.icon || "mdi:dots-horizontal"}"></ha-icon><div class="crumbs">${crumbs}</div>`;
+        h.querySelector(".bk").addEventListener("click", (e) => { e.stopPropagation(); this._back(); });
+        h.querySelectorAll(".crumb").forEach((c) => c.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const i = +c.dataset.i;
+          this._stack = this._stack.slice(0, i + 1);
+          this._renderLevel("back");
+        }));
+      } else {
+        h.innerHTML = `<ha-icon icon="${lv.icon || "mdi:dots-horizontal"}"></ha-icon><span>${lv.label || ""}</span>`;
+      }
+      const body = this.$("body");
+      body.classList.remove("fwd", "back");
+      if (dir) { void body.offsetWidth; body.classList.add(dir); }
+      body.scrollTop = 0;
+      pop.classList.toggle("mus", depth === 1 && !!lv.music);
+      pop.dataset.cpos = lv.cards_position === "bottom" ? "bottom" : "top";
+      pop.dataset.pw = ["narrow", "normal", "large", "xlarge", "full"].includes(lv.panel_width) ? lv.panel_width : "auto";
+      // lecteurs (niveau 1 seulement)
+      this.$("players")._key = null;
+      this._fillPlayers();
+      // cartes Lovelace
+      this._fillCards(lv.cards || [], lv.cards_size || [], Math.max(1, Math.min(3, parseInt(lv.cards_columns, 10) || 1)));
+      pop.classList.toggle("has-cards", !!(lv.cards && lv.cards.length));
+      // tuiles
+      const items = (lv.popup || []).filter((p) => userOk(p, this.hass));
       const g = this.$("grid");
       g.innerHTML = "";
       g.dataset.n = items.length;
       g.hidden = !items.length;
-      this.$("pop").classList.toggle("mus", !!r.music);
-      this.$("players")._key = null;
-      this._fillPlayers();
       items.forEach((p) => {
         const b = document.createElement("button");
-        b.className = "tile" + (matches(routeUrl(p)) ? " here" : "");
-        b.style.setProperty("--c", colorOf(p.color || p.icon_color, colorOf(r.color || r.icon_color, this.config.accent)));
+        const sub = hasLevel(p) && depth < MAX_DEPTH;
+        b.className = "tile" + (matches(routeUrl(p)) ? " here" : "") + (sub ? " sub" : "");
+        b.style.setProperty("--c", colorOf(p.color || p.icon_color, color));
         b.dataset.entity = p.entity || "";
-        b.innerHTML = `<span class="ti"><ha-icon icon="${p.icon || "mdi:circle-outline"}"></ha-icon></span><span class="tl">${p.label || ""}</span><span class="ts"></span>`;
+        b.innerHTML = `<span class="ti"><ha-icon icon="${p.icon || "mdi:circle-outline"}"></ha-icon></span><span class="tl">${p.label || ""}</span><span class="ts"></span>${sub ? `<ha-icon class="chev" icon="mdi:chevron-right"></ha-icon>` : ""}`;
         this._press(b, () => {
           haptic(this.config.haptic);
           const a = p.tap_action;
-          if (a && a.action && a.action !== "navigate") { this._run(a, p, b); if (a.action !== "toggle" && a.action !== "perform-action" && a.action !== "call-service") this.closePop(); return; }
+          if (a && a.action && a.action !== "navigate") {
+            this._run(a, p, b);
+            if (!["toggle", "perform-action", "call-service", "open-popup"].includes(a.action)) this.closePop();
+            return;
+          }
           const url = routeUrl(p);
-          if (url) { this.closePop(); navigate(url); }
-        }, () => p.entity && this._run({ action: "more-info" }, p, b));
+          if (url) { this.closePop(); navigate(url); return; }
+          if (sub) this._push(p);
+        }, () => {
+          const ha = p.hold_action;
+          if (ha && ha.action && ha.action !== "open-popup") return this._run(ha, p, b);
+          if (sub) return this._push(p);
+          if (p.entity) this._run({ action: "more-info" }, p, b);
+        });
         g.appendChild(b);
       });
-      // point d'origine de l'animation
-      const d = el.getBoundingClientRect();
-      this.$("pop").style.setProperty("--ox", `${d.left + d.width / 2}px`);
-      this.classList.add("open");
       this._updateLive();
+    }
+    async _fillCards(list, sizes = [], cols = 1) {
+      const box = this.$("cards");
+      box.style.setProperty("--ccols", String(cols));
+      const token = (this._cardsToken = (this._cardsToken || 0) + 1);
+      box.innerHTML = "";
+      box.hidden = !list.length;
+      if (!list.length) return;
+      if (!this._helpers) {
+        try { this._helpers = await window.loadCardHelpers(); } catch (e) { return; }
+      }
+      if (token !== this._cardsToken) return;
+      list.forEach((cfg, k) => {
+        const key = JSON.stringify(cfg);
+        let el = this._cardCache.get(key);
+        if (!el) {
+          try { el = this._helpers.createCardElement(cfg); } catch (e) { el = this._helpers.createCardElement({ type: "error", error: String(e), origConfig: cfg }); }
+          this._cardCache.set(key, el);
+          if (this._cardCache.size > 40) this._cardCache.delete(this._cardCache.keys().next().value);
+        }
+        el.hass = this.hass;
+        const w = document.createElement("div");
+        w.className = "cw";
+        const sp = sizes[k] && sizes[k].span;
+        if (sp === "full" || (sp && +sp >= cols)) w.style.gridColumn = "1 / -1";
+        else if (sp && +sp > 1) w.style.gridColumn = `span ${+sp}`;
+        w.appendChild(el);
+        box.appendChild(w);
+      });
     }
     closePop() {
       this.classList.remove("open");
       this._popRoute = null;
       clearTimeout(this._plT);
-      this._plT = setTimeout(() => { if (!this._popRoute) { const b = this.$("players"); b.innerHTML = ""; b._key = null; } }, 400);
+      this._plT = setTimeout(() => {
+        if (this._popRoute) return;
+        const b = this.$("players"); b.innerHTML = ""; b._key = null;
+        this.$("cards").innerHTML = ""; // détache les cartes (caméras, graphiques…)
+        this._stack = [];
+      }, 400);
     }
     _count(list) {
       const h = this.hass;
       return list.filter((e) => h.states[e] && ACTIVE_STATES.includes(h.states[e].state)).length;
+    }
+    _stateText(st) {
+      const h = this.hass;
+      try { if (h.formatEntityState) return h.formatEntityState(st); } catch (e) { /* ancien HA */ }
+      return st.state + (st.attributes.unit_of_measurement ? " " + st.attributes.unit_of_measurement : "");
     }
     _updateLive() {
       const h = this.hass;
@@ -411,15 +820,15 @@
           const e = t.dataset.entity;
           const st = e && h.states[e];
           t.classList.toggle("on", !!st && ACTIVE_STATES.includes(st.state));
-          const ts = t.querySelector(".ts");
-          ts.textContent = st ? (STATE_FR[st.state] || st.state) + (st.attributes.unit_of_measurement ? " " + st.attributes.unit_of_measurement : "") : "";
+          t.querySelector(".ts").textContent = st ? this._stateText(st) : "";
         });
+        this.$("cards").querySelectorAll(".cw > *").forEach((c) => (c.hass = h));
       }
     }
 
     static css() {
       return `
-      :host { position: fixed; inset: 0; pointer-events: none; z-index: 6; --accent: #26c6da; font-family: var(--paper-font-body1_-_font-family, inherit); }
+      :host { position: fixed; inset: 0; pointer-events: none; z-index: 6; --accent: #26c6da; --tl-lines: 2; --lb-lines: 2; font-family: var(--paper-font-body1_-_font-family, inherit); }
       button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
       .dock {
         position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); transform: translateX(-50%);
@@ -441,16 +850,18 @@
         box-shadow: 0 0 18px color-mix(in srgb, var(--c) 45%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.25);
         transition: transform .45s cubic-bezier(.34,1.45,.55,1), width .35s, height .35s, opacity .3s, background .4s, box-shadow .4s;
       }
-      .it { position: relative; flex: 1 1 0; min-width: 0; height: 52px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: rgba(225,238,244,.72); transition: transform .2s, flex-grow .4s cubic-bezier(.34,1.3,.55,1); }
+      .it { position: relative; flex: 1 1 0; min-width: 0; min-height: 52px; padding: 4px 0; box-sizing: border-box; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: rgba(225,238,244,.72); transition: transform .2s, flex-grow .4s cubic-bezier(.34,1.3,.55,1); }
       :host([data-labels="active"][data-pos="bottom"]) .it.active { flex-grow: 2.1; }
       .it.down { transform: scale(.88); }
       .it.pop-anim .ic { animation: boing .5s cubic-bezier(.3,1.6,.5,1); }
       @keyframes boing { 0% { transform: scale(.8); } 60% { transform: scale(1.18) translateY(-2px); } 100% { transform: none; } }
-      .ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; color: var(--c); filter: saturate(.75) brightness(.95); transition: filter .3s, transform .3s; }
+      .ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--c); filter: saturate(.75) brightness(.95); transition: filter .3s, transform .3s; }
       .ic ha-icon { --mdc-icon-size: 24px; }
       .ic img { width: 26px; height: 26px; object-fit: contain; border-radius: 8px; }
       .it.active .ic { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--c) 80%, transparent)) saturate(1.2) brightness(1.15); transform: translateY(-1px); }
-      .lb { font-size: 10px; font-weight: 700; letter-spacing: .01em; max-width: 100%; padding: 0 2px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+      .lb { font-size: 10px; font-weight: 700; line-height: 1.15; letter-spacing: .01em; max-width: 100%; padding: 0 3px; box-sizing: border-box; text-align: center; color: #fff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .lb.w { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lb-lines); }
       :host([data-labels="none"]) .lb, :host([data-labels="active"]) .it:not(.active) .lb { display: none; }
       .lb:empty { display: none; }
       .badge { position: absolute; top: -5px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; color: #fff; background: #ef4444; box-shadow: 0 0 0 2px rgba(14,20,28,.9); transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
@@ -478,7 +889,7 @@
       :host([data-pos="left"]) .dock, :host([data-pos="right"]) .dock { left: 12px; right: auto; top: 50%; bottom: auto; transform: translateY(-50%); width: 72px; padding: 6px; }
       :host([data-pos="right"]) .dock { left: auto; right: 12px; }
       :host([data-pos="left"]) .items, :host([data-pos="right"]) .items { flex-direction: column; }
-      :host([data-pos="left"]) .it, :host([data-pos="right"]) .it { flex: 0 0 auto; height: 58px; }
+      :host([data-pos="left"]) .it, :host([data-pos="right"]) .it { flex: 0 0 auto; min-height: 58px; }
       :host([data-pos="left"].hidden) .dock, :host([data-pos="right"].hidden) .dock { transform: translateY(-50%); opacity: 1; }
       :host([data-pos="hidden"]) .dock { display: none; }
       @media (min-width: 1024px) { :host([data-pos="bottom"]) .dock { width: auto; min-width: 520px; } :host([data-pos="bottom"]) .it, :host([data-pos="bottom"]) .it.active { flex: 0 0 76px; } }
@@ -498,22 +909,54 @@
       :host(.open) .scrim { opacity: 1; pointer-events: auto; }
       .pop {
         position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 76px); width: min(calc(100vw - 20px), 460px); box-sizing: border-box;
-        padding: 12px; border-radius: 26px; pointer-events: none; opacity: 0;
+        padding: 12px; border-radius: 26px; pointer-events: none; opacity: 0; display: flex; flex-direction: column;
         transform-origin: var(--ox, 50%) 100%; transform: translateX(-50%) translateY(16px) scale(.92);
         background: linear-gradient(180deg, rgba(30,42,52,.78), rgba(12,18,26,.88));
         backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
         border: 1px solid rgba(255,255,255,.09);
         box-shadow: 0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent);
-        transition: opacity .22s, transform .38s cubic-bezier(.3,1.35,.5,1);
+        transition: opacity .22s, transform .38s cubic-bezier(.3,1.35,.5,1), width .3s;
       }
       :host(.open) .pop { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
       :host([data-pos="left"]) .pop, :host([data-pos="right"]) .pop { bottom: auto; top: 50%; transform: translate(-50%, -50%) scale(.92); }
       :host([data-pos="left"].open) .pop, :host([data-pos="right"].open) .pop { transform: translate(-50%, -50%) scale(1); }
-      .pop-h { display: flex; align-items: center; gap: 8px; margin: 2px 4px 10px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: rgba(225,238,244,.75); }
-      .pop-h ha-icon { --mdc-icon-size: 18px; color: var(--c); }
-      .players { display: flex; flex-direction: column; gap: 8px; max-height: min(60vh, 520px); overflow-y: auto; scrollbar-width: none; }
-      .players[hidden], .grid[hidden] { display: none; }
-      .players:not([hidden]) + .grid:not([hidden]) { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
+      .pop-h { display: flex; align-items: center; gap: 8px; margin: 2px 4px 10px; min-height: 22px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: rgba(225,238,244,.75); }
+      .pop-h > ha-icon { --mdc-icon-size: 18px; color: var(--c); flex: none; }
+      .pop-h .bk { flex: none; width: 30px; height: 30px; margin: -4px 0 -4px -4px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); color: #fff; transition: background .2s, transform .2s; }
+      .pop-h .bk:hover { background: rgba(255,255,255,.16); }
+      .pop-h .bk:active { transform: scale(.9); }
+      .pop-h .bk ha-icon { --mdc-icon-size: 20px; }
+      .crumbs { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; }
+      .crumbs .crumb { opacity: .55; cursor: pointer; overflow: hidden; text-overflow: ellipsis; flex-shrink: 2; }
+      .crumbs .crumb:hover { opacity: .85; }
+      .crumbs .cur { color: #fff; overflow: hidden; text-overflow: ellipsis; }
+      .crumbs .sep { font-style: normal; opacity: .4; flex: none; }
+      .body { display: flex; flex-direction: column; max-height: calc(100vh - 190px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
+      .body::-webkit-scrollbar { display: none; }
+      .body.fwd { animation: lvlF .34s cubic-bezier(.3,1.2,.5,1); }
+      .body.back { animation: lvlB .34s cubic-bezier(.3,1.2,.5,1); }
+      @keyframes lvlF { from { opacity: 0; transform: translateX(36px); } }
+      @keyframes lvlB { from { opacity: 0; transform: translateX(-36px); } }
+      .players { order: 1; display: flex; flex-direction: column; gap: 8px; max-height: min(60vh, 520px); overflow-y: auto; scrollbar-width: none; }
+      .cards { order: 2; display: grid; grid-template-columns: repeat(var(--ccols, 1), minmax(0, 1fr)); gap: 10px; align-items: start; }
+      @media (max-width: 520px) { .cards { gap: 8px; } }
+      .grid { order: 3; }
+      .pop[data-cpos="bottom"] .cards { order: 4; }
+      .players[hidden], .grid[hidden], .cards[hidden] { display: none; }
+      .players:not([hidden]) ~ .grid:not([hidden]), .players:not([hidden]) ~ .cards:not([hidden]) { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
+      .pop[data-cpos="top"] .cards:not([hidden]) ~ .grid:not([hidden]) { margin-top: 12px; }
+      .pop[data-cpos="bottom"] .grid:not([hidden]) ~ .cards:not([hidden]) { margin-top: 12px; }
+      .cw { opacity: 0; transform: translateY(8px); }
+      :host(.open) .cw { animation: tin .4s cubic-bezier(.3,1.3,.5,1) forwards; }
+      ${Array.from({ length: 8 }, (_, i) => `:host(.open) .cw:nth-child(${i + 1}) { animation-delay: ${i * 40}ms; }`).join("\n")}
+      .cw > * { display: block; --ha-card-border-radius: 18px; }
+      .pop.has-cards { width: min(calc(100vw - 20px), 520px); }
+      .pop[data-pw="narrow"] { width: min(calc(100vw - 20px), 360px); }
+      .pop[data-pw="normal"] { width: min(calc(100vw - 20px), 460px); }
+      .pop[data-pw="large"] { width: min(calc(100vw - 20px), 640px); }
+      .pop[data-pw="xlarge"] { width: min(calc(100vw - 20px), 860px); }
+      .pop[data-pw="full"] { width: calc(100vw - 20px); }
+      :host([data-pos="left"]) .pop[data-pw="full"], :host([data-pos="right"]) .pop[data-pw="full"] { width: calc(100vw - 120px); }
       .players holm-music-card { display: block; opacity: 0; transform: translateY(8px); }
       :host(.open) .players holm-music-card { animation: tin .4s cubic-bezier(.3,1.3,.5,1) forwards; }
       ${Array.from({ length: 8 }, (_, i) => `:host(.open) .players holm-music-card:nth-of-type(${i + 1}) { animation-delay: ${40 + i * 50}ms; }`).join("\n")}
@@ -539,14 +982,17 @@
       .tile.down { transform: scale(.94) !important; }
       .ti { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); transition: background .3s, color .3s; }
       .ti ha-icon { --mdc-icon-size: 21px; }
-      .tl { font-size: 12.5px; font-weight: 700; color: #fff; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tl { font-size: 12.5px; font-weight: 700; line-height: 1.22; color: #fff; max-width: 100%;
+        display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--tl-lines); overflow: hidden; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
       .ts { font-size: 11px; color: rgba(225,238,244,.6); margin-top: -4px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .ts:empty { display: none; }
+      .chev { position: absolute; top: 9px; right: 7px; --mdc-icon-size: 18px; color: rgba(255,255,255,.45); transition: transform .2s, color .2s; }
+      .tile.sub:hover .chev { transform: translateX(2px); color: var(--c); }
       .tile.here { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
       .tile.on { background: linear-gradient(160deg, color-mix(in srgb, var(--c) 30%, transparent), color-mix(in srgb, var(--c) 10%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 6px 18px -8px var(--c); }
       .tile.on .ti { background: var(--c); color: #fff; }
-      .tile.on .ts { color: #fff; }
-      @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .tile { opacity: 1; transform: none; } }`;
+      .tile.on .ts, .tile.on .chev { color: #fff; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .tile, .cw { opacity: 1; transform: none; } }`;
     }
   }
   if (!customElements.get("holm-navbar-bar")) customElements.define("holm-navbar-bar", HolmNavbarBar);
@@ -558,12 +1004,13 @@
     static getConfigElement() {
       return document.createElement("holm-navbar-card-editor");
     }
-    static getStubConfig() {
+    static getStubConfig(hass) {
+      const l = langOf(null, hass);
       return {
         type: "custom:holm-navbar-card",
         routes: [
-          { label: "Accueil", icon: "mdi:home", url: "/lovelace/0", color: "#26c6da" },
-          { label: "Lumières", icon: "mdi:lightbulb-group", url: "/lovelace/1", color: "#ffca28" },
+          { label: tr(l, "home"), icon: "mdi:home", url: "/lovelace/0", color: "#26c6da" },
+          { label: tr(l, "lights"), icon: "mdi:lightbulb-group", url: "/lovelace/1", color: "#ffca28" },
         ],
       };
     }
@@ -634,6 +1081,7 @@
       }
       const master = this._config && this._config.routes && this._config.routes.length;
       const src = master ? this._config : store.cfg[dashOf()] || {};
+      const l = langOf(src, this._hass);
       const icons = (src.routes || []).map((r) => `<span style="color:${colorOf(r.color || r.icon_color, "#26c6da")}">${r.image ? `<img src="${r.image}">` : `<ha-icon icon="${r.icon || "mdi:circle-outline"}"></ha-icon>`}</span>`).join("");
       this.shadowRoot.innerHTML = `<style>
         :host{display:block}
@@ -644,9 +1092,9 @@
         .r ha-icon{--mdc-icon-size:20px}.r img{width:20px;height:20px;object-fit:contain}
         .n{margin-top:8px;font-weight:500;font-size:12px;opacity:.7}
       </style>
-      <div class="p"><div class="h"><ha-icon icon="mdi:dock-bottom"></ha-icon>Barre de navigation HOLM<small>${master ? "carte maître" : "config commune"}</small></div>
-      <div class="r">${icons || "<i style='opacity:.6'>aucun onglet</i>"}</div>
-      <div class="n">${mode === "edit" ? (master ? "Clique sur cette carte (crayon) pour modifier les onglets de toutes les vues." : "Cette vue réutilise la barre définie sur la carte maître (celle qui contient les onglets).") : "La barre s'affiche en bas de l'écran."}</div></div>`;
+      <div class="p"><div class="h"><ha-icon icon="mdi:dock-bottom"></ha-icon>${tr(l, "preview_title")}<small>${master ? tr(l, "master") : tr(l, "common")}</small></div>
+      <div class="r">${icons || `<i style='opacity:.6'>${tr(l, "no_tabs")}</i>`}</div>
+      <div class="n">${mode === "edit" ? (master ? tr(l, "edit_master") : tr(l, "edit_common")) : tr(l, "preview_note")}</div></div>`;
     }
     async _resolve(dash) {
       if (this._config.routes && this._config.routes.length) {
@@ -703,21 +1151,18 @@
     }
   }
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+  const getAt = (o, path) => path.reduce((a, k) => (a == null ? a : a[k]), o);
 
   // ------------------------------------------------------------------
   //  Éditeur visuel
   // ------------------------------------------------------------------
-  const ACTIONS = [
-    { value: "navigate", label: "Aller à une vue" },
-    { value: "toggle", label: "Basculer l'entité" },
-    { value: "more-info", label: "Fiche de l'entité" },
-    { value: "perform-action", label: "Lancer une action" },
-  ];
   class HolmNavbarCardEditor extends HTMLElement {
     constructor() {
       super();
       this._open = new Set();
+      this._picker = null; // chemin de l'élément dont le sélecteur de carte est ouvert
     }
+    t(key, ...a) { return tr(langOf(this._config, this._hass), key, ...a); }
     setConfig(config) {
       // HA gèle (deepFreeze) la config reçue : on travaille toujours sur une copie
       this._config = JSON.parse(JSON.stringify(config || {}));
@@ -725,8 +1170,13 @@
     }
     set hass(hass) {
       this._hass = hass;
-      this.querySelectorAll("ha-form").forEach((f) => (f.hass = hass));
+      this.querySelectorAll("ha-form, hui-card-element-editor, hui-card-picker").forEach((f) => (f.hass = hass));
       if (!this._done) this._render();
+    }
+    set lovelace(l) {
+      // HA passe la LovelaceConfig du tableau de bord ; le sélecteur de cartes a besoin de .views
+      this._lovelace = l && Array.isArray(l.views) ? l : l && l.config && Array.isArray(l.config.views) ? l.config : { views: [] };
+      this.querySelectorAll("hui-card-element-editor, hui-card-picker").forEach((f) => (f.lovelace = l));
     }
     _update(fn, rerender) {
       const c = JSON.parse(JSON.stringify(this._config));
@@ -738,12 +1188,12 @@
       this._selfT = setTimeout(() => (this._self = false), 400);
       if (rerender) this._render();
     }
-    _form(schema, data, onChange, labels) {
+    _form(schema, data, onChange) {
       const f = document.createElement("ha-form");
       f.hass = this._hass;
       f.schema = schema;
       f.data = data;
-      f.computeLabel = (s) => (labels && labels[s.name]) || s.name;
+      f.computeLabel = (s) => (s.name ? this.t("f_" + s.name) : "");
       f.addEventListener("value-changed", (ev) => { ev.stopPropagation(); f.data = ev.detail.value; onChange(ev.detail.value); });
       return f;
     }
@@ -776,7 +1226,7 @@
       if ("music" in v) { if (v.music) o.music = true; else delete o.music; }
       if ("users" in v) { if (v.users && v.users.length) o.users = v.users; else delete o.users; }
       delete o.icon_color;
-      return o; // popup conservé tel quel depuis la config courante
+      return o; // sous-menu et cartes conservés tels quels depuis la config courante
     }
     _formData(it) {
       return {
@@ -794,67 +1244,296 @@
       hd.className = "hn-row";
       const t = document.createElement("div");
       t.className = "t";
-      const ref = (it) => (t.innerHTML = `<ha-icon icon="${it.icon || "mdi:circle-outline"}" style="color:${colorOf(it.color || it.icon_color, "#26c6da")}"></ha-icon><span>${it.label || it.url || fallback}</span>${it.popup && it.popup.length ? ` <small>· ${it.popup.length} sous-menu${it.popup.length > 1 ? "s" : ""}</small>` : ""}`);
+      const ref = (it) => {
+        const extra = [];
+        if (it.popup && it.popup.length) extra.push(this.t("n_sub", it.popup.length));
+        if (it.cards && it.cards.length) extra.push(this.t("n_cards", it.cards.length));
+        t.innerHTML = `<ha-icon icon="${it.icon || "mdi:circle-outline"}" style="color:${colorOf(it.color || it.icon_color, "#26c6da")}"></ha-icon><span>${it.label || it.url || fallback}</span>${extra.length ? ` <small>· ${extra.join(" · ")}</small>` : ""}`;
+      };
       ref(item);
       hd.append(t, ...buttons);
       hd._ref = ref;
       return hd;
     }
+    async _ensureCardEditors() {
+      if (customElements.get("hui-card-element-editor") && customElements.get("hui-card-picker")) return true;
+      if (this._loadingEditors) return false;
+      this._loadingEditors = true;
+      try {
+        // l'éditeur de la carte « pile verticale » charge le sélecteur et l'éditeur de cartes de HA
+        const helpers = await window.loadCardHelpers();
+        const stack = await helpers.createCardElement({ type: "vertical-stack", cards: [] });
+        if (stack && stack.constructor.getConfigElement) await stack.constructor.getConfigElement();
+        await Promise.race([
+          Promise.all([customElements.whenDefined("hui-card-element-editor"), customElements.whenDefined("hui-card-picker")]),
+          new Promise((r) => setTimeout(r, 4000)),
+        ]);
+      } catch (e) { /* éditeur YAML seul */ }
+      this._loadingEditors = false;
+      this._render();
+      return true;
+    }
+    _itemSchema(isSub) {
+      const ACTIONS = [
+        { value: "navigate", label: this.t("a_navigate") }, { value: "toggle", label: this.t("a_toggle") },
+        { value: "more-info", label: this.t("a_more_info") }, { value: "perform-action", label: this.t("a_perform") },
+      ];
+      return [
+        { type: "grid", name: "", schema: [{ name: "label", selector: { text: {} } }, { name: "icon", selector: { icon: {} } }] },
+        { name: "url", selector: { navigation: {} } },
+        { type: "grid", name: "", schema: [{ name: "color", selector: { text: {} } }, { name: "action", selector: { select: { mode: "dropdown", options: ACTIONS } } }] },
+        { type: "expandable", name: "", title: isSub ? this.t("exp_tile") : this.t("exp_tab"), schema: isSub
+          ? [{ name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }]
+          : [{ name: "music", selector: { boolean: {} } }, { name: "badge_entities", selector: { entity: { multiple: true } } }, { name: "image", selector: { text: {} } }, { name: "users", selector: { text: { multiple: true } } }, { name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }] },
+      ];
+    }
+    // un onglet (depth 0) ou une tuile de sous-menu (depth ≥ 1), avec son sous-menu et ses cartes
+    _itemPanel(container, path, item, depth, idx, count) {
+      const key = path.join(".");
+      const parentPath = path.slice(0, -1);
+      const move = (d) => this._update((cc) => { const a = getAt(cc, parentPath); const j = idx + d; if (j < 0 || j >= a.length) return; a.splice(j, 0, a.splice(idx, 1)[0]); }, true);
+      const head = this._head(item, depth === 0 ? this.t("tab_n", idx + 1) : this.t("item_n", idx + 1), [
+        this._btn("mdi:arrow-up", this.t("up"), () => idx > 0 && move(-1)),
+        this._btn("mdi:arrow-down", this.t("down"), () => idx < count - 1 && move(1)),
+        this._btn("mdi:delete-outline", this.t("del"), () => this._update((cc) => {
+          const a = getAt(cc, parentPath); a.splice(idx, 1);
+          if (depth > 0 && !a.length) delete getAt(cc, parentPath.slice(0, -1)).popup;
+        }, true)),
+      ]);
+      const p = this._panel(key, head);
+      const inner = document.createElement("div");
+      inner.className = "hn-in";
+      inner.appendChild(this._form(this._itemSchema(depth > 0), this._formData(item), (v) => {
+        this._update((cc) => { const parent = getAt(cc, parentPath); parent[idx] = this._itemFromForm(v, parent[idx]); head._ref(parent[idx]); });
+      }));
+      if (depth < MAX_DEPTH) {
+        const sub = document.createElement("div");
+        sub.className = "hn-sub";
+        const opens = depth === 0 ? (item.url ? this.t("sub_hold_tab") : this.t("sub_tap_tab"))
+          : (item.url || (item.tap_action && item.tap_action.action) ? this.t("sub_hold_tile") : this.t("sub_tap_tile"));
+        sub.innerHTML = `<div class="hn-subt"><ha-icon icon="mdi:view-grid-outline"></ha-icon>${this.t("sub_title")}</div><div class="hn-subh">${opens}</div>`;
+        (item.popup || []).forEach((s, j) => this._itemPanel(sub, path.concat("popup", j), s, depth + 1, j, item.popup.length));
+        const add = document.createElement("button");
+        add.className = "hn-add";
+        add.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>${this.t("add_sub")}`;
+        add.addEventListener("click", () => {
+          const j = (item.popup || []).length;
+          this._open.add(key);
+          this._open.add(path.concat("popup", j).join("."));
+          this._update((cc) => { const it = getAt(cc, path); it.popup = it.popup || []; it.popup.push({ label: "", icon: "mdi:star-outline" }); }, true);
+        });
+        sub.appendChild(add);
+        inner.appendChild(sub);
+      }
+      inner.appendChild(this._cardsEditor(path, item));
+      p.appendChild(inner);
+      container.appendChild(p);
+    }
+    // cartes Lovelace du panneau, avec le sélecteur et l'éditeur de cartes de Home Assistant
+    _cardsEditor(path, item) {
+      const key = path.join(".");
+      const box = document.createElement("div");
+      box.className = "hn-sub hn-cards";
+      box.innerHTML = `<div class="hn-subt"><ha-icon icon="mdi:cards-outline"></ha-icon>${this.t("cards_title")}</div><div class="hn-subh">${this.t("cards_hint")}</div>`;
+      const cards = item.cards || [];
+      const ready = customElements.get("hui-card-element-editor") && customElements.get("hui-card-picker");
+      if (!ready && (cards.length || this._picker === key)) {
+        const w = document.createElement("div");
+        w.className = "hn-note";
+        w.textContent = this.t("loading");
+        box.appendChild(w);
+        this._ensureCardEditors();
+      }
+      if (cards.length) {
+        const cols = Math.max(1, Math.min(3, parseInt(item.cards_columns, 10) || 1));
+        const schema = [{ type: "grid", name: "", schema: [
+          { name: "panel_width", selector: { select: { mode: "dropdown", options: ["auto", "narrow", "normal", "large", "xlarge", "full"].map((v) => ({ value: v, label: this.t("o_pw_" + v) })) } } },
+          { name: "cards_columns", selector: { select: { mode: "dropdown", options: [1, 2, 3].map((n) => ({ value: String(n), label: this.t("o_cols", n) })) } } },
+        ] }];
+        if (item.popup && item.popup.length) schema.push({ name: "cards_position", selector: { select: { mode: "dropdown", options: [{ value: "top", label: this.t("o_top") }, { value: "bottom", label: this.t("o_below") }] } } });
+        const hint = document.createElement("div");
+        hint.className = "hn-subh";
+        hint.textContent = this.t("size_hint");
+        box.appendChild(hint);
+        box.appendChild(this._form(schema,
+          { panel_width: item.panel_width || "auto", cards_columns: String(cols), cards_position: item.cards_position === "bottom" ? "bottom" : "top" },
+          (v) => {
+            const colsChanged = String(v.cards_columns || "1") !== String(cols);
+            this._update((cc) => {
+              const it = getAt(cc, path);
+              if (v.cards_position === "bottom") it.cards_position = "bottom"; else delete it.cards_position;
+              if (v.panel_width && v.panel_width !== "auto") it.panel_width = v.panel_width; else delete it.panel_width;
+              const n = parseInt(v.cards_columns, 10);
+              if (n > 1) it.cards_columns = n; else { delete it.cards_columns; delete it.cards_size; }
+            }, colsChanged);
+          }));
+      }
+      const cols = Math.max(1, Math.min(3, parseInt(item.cards_columns, 10) || 1));
+      const sizeOps = (cc, fn) => { const it = getAt(cc, path); if (!it.cards_size) return; fn(it.cards_size); while (it.cards_size.length && !it.cards_size[it.cards_size.length - 1]) it.cards_size.pop(); if (!it.cards_size.some(Boolean)) delete it.cards_size; };
+      cards.forEach((cfg, k) => {
+        const ckey = `${key}.c${k}`;
+        const move = (d) => this._update((cc) => {
+          const a = getAt(cc, path).cards; const j = k + d; if (j < 0 || j >= a.length) return;
+          a.splice(j, 0, a.splice(k, 1)[0]);
+          sizeOps(cc, (sz) => { while (sz.length < a.length) sz.push(null); sz.splice(j, 0, sz.splice(k, 1)[0]); });
+        }, true);
+        const hd = document.createElement("div");
+        hd.className = "hn-row";
+        const tt = document.createElement("div");
+        tt.className = "t";
+        tt.innerHTML = `<ha-icon icon="mdi:card-outline" style="color:#26c6da"></ha-icon><span>${String(cfg.type || "?").replace(/^custom:/, "")}</span>${cfg.title || cfg.name ? ` <small>· ${cfg.title || cfg.name}</small>` : ""}`;
+        let ed = null;
+        const mode = this._btn("mdi:code-braces", this.t("code_editor"), () => {
+          if (!ed || !ed.toggleMode) return;
+          ed.toggleMode();
+        });
+        hd.append(tt, mode,
+          this._btn("mdi:arrow-up", this.t("up"), () => k > 0 && move(-1)),
+          this._btn("mdi:arrow-down", this.t("down"), () => k < cards.length - 1 && move(1)),
+          this._btn("mdi:delete-outline", this.t("del"), () => this._update((cc) => {
+            const it = getAt(cc, path); it.cards.splice(k, 1);
+            sizeOps(cc, (sz) => sz.splice(k, 1));
+            if (!it.cards.length) { ["cards", "cards_position", "cards_columns", "cards_size", "panel_width"].forEach((x) => delete it[x]); }
+          }, true)));
+        const p = this._panel(ckey, hd);
+        const inner = document.createElement("div");
+        inner.className = "hn-in";
+        if (cols > 1) {
+          const cur = (item.cards_size && item.cards_size[k] && item.cards_size[k].span) || 1;
+          const opts = [];
+          for (let n = 1; n < cols; n++) opts.push({ value: String(n), label: this.t("o_span", n) });
+          opts.push({ value: "full", label: this.t("o_span_full") });
+          inner.appendChild(this._form([{ name: "span", selector: { select: { mode: "dropdown", options: opts } } }],
+            { span: cur === "full" || +cur >= cols ? "full" : String(cur) },
+            (v) => this._update((cc) => {
+              const it = getAt(cc, path);
+              it.cards_size = it.cards_size || [];
+              while (it.cards_size.length <= k) it.cards_size.push(null);
+              it.cards_size[k] = v.span && v.span !== "1" ? { span: v.span === "full" ? "full" : +v.span } : null;
+              sizeOps(cc, () => {});
+            })));
+        }
+        if (ready) {
+          ed = document.createElement("hui-card-element-editor");
+          ed.hass = this._hass;
+          ed.lovelace = this._lovelace || { views: [] };
+          ed.value = JSON.parse(JSON.stringify(cfg));
+          ed.addEventListener("config-changed", (e) => {
+            e.stopPropagation();
+            const nc = e.detail && e.detail.config;
+            if (!nc) return;
+            this._update((cc) => { getAt(cc, path).cards[k] = nc; });
+          });
+          ed.addEventListener("GUImode-changed", (e) => {
+            e.stopPropagation();
+            mode.label = e.detail && e.detail.guiMode === false ? this.t("visual_editor") : this.t("code_editor");
+            mode.innerHTML = `<ha-icon icon="${e.detail && e.detail.guiMode === false ? "mdi:list-box-outline" : "mdi:code-braces"}"></ha-icon>`;
+          });
+          inner.appendChild(ed);
+        }
+        p.appendChild(inner);
+        box.appendChild(p);
+      });
+      if (this._picker === key && ready) {
+        const wrap = document.createElement("div");
+        wrap.className = "hn-pick";
+        const top = document.createElement("div");
+        top.className = "hn-row";
+        const lb = document.createElement("div");
+        lb.className = "t";
+        lb.textContent = this.t("pick_card");
+        top.append(lb, this._btn("mdi:close", this.t("cancel"), () => { this._picker = null; this._render(); }));
+        const pk = document.createElement("hui-card-picker");
+        pk.hass = this._hass;
+        pk.lovelace = this._lovelace || { views: [] };
+        pk.addEventListener("config-changed", (e) => {
+          e.stopPropagation();
+          const nc = e.detail && e.detail.config;
+          if (!nc) return;
+          const n = (item.cards || []).length;
+          this._picker = null;
+          this._open.add(`${key}.c${n}`);
+          this._update((cc) => { const it = getAt(cc, path); it.cards = it.cards || []; it.cards.push(nc); }, true);
+        });
+        wrap.append(top, pk);
+        box.appendChild(wrap);
+      } else {
+        const add = document.createElement("button");
+        add.className = "hn-add";
+        add.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>${this.t("add_card")}`;
+        add.addEventListener("click", () => { this._picker = key; this._open.add(key); this._render(); });
+        box.appendChild(add);
+      }
+      return box;
+    }
     _render() {
       if (!this._hass || !this._config) return;
       this._done = true;
-      this.innerHTML = `<style>
+      const scroll = this.closest ? null : null;
+      const out = document.createDocumentFragment();
+      const st = document.createElement("style");
+      out.appendChild(st);
+      st.textContent = `
         .hn-sec{margin:16px 0 6px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
         .hn-note.warn{background:rgba(255,152,0,.14)}.hn-note a{color:inherit;font-weight:700}
         .hn-note{font-size:13px;opacity:.85;padding:10px 12px;border-radius:10px;background:rgba(38,198,218,.1);margin:8px 0;line-height:1.4}
         .hn-row{display:flex;align-items:center;gap:2px;width:100%}
         .hn-row .t{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600}
         .hn-row .t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .hn-row small{opacity:.6;font-weight:500;white-space:nowrap}
+        .hn-row small{opacity:.6;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         ha-expansion-panel{margin:6px 0;border-radius:12px;display:block}
         .hn-in{padding:4px 2px 8px}
         .hn-sub{margin:10px 0 4px;padding:8px 0 0 10px;border-left:3px solid rgba(38,198,218,.45)}
-        .hn-subt{font-weight:700;font-size:13px;margin:0 0 4px}
+        .hn-cards{border-left-color:rgba(168,85,247,.5)}
+        .hn-subt{font-weight:700;font-size:13px;margin:0 0 4px;display:flex;align-items:center;gap:6px}
+        .hn-subt ha-icon{--mdc-icon-size:18px;opacity:.75}
         .hn-subh{font-size:12px;opacity:.7;margin-bottom:6px}
         .hn-add{display:inline-flex;align-items:center;gap:6px;margin:8px 0;padding:8px 14px;border-radius:10px;border:1px dashed rgba(38,198,218,.6);background:rgba(38,198,218,.08);color:inherit;font:600 13px inherit;cursor:pointer}
         .hn-add.main{border-style:solid;background:rgba(38,198,218,.2)}
-      </style>`;
+        .hn-pick{margin:8px 0;padding:8px;border-radius:12px;border:1px solid rgba(168,85,247,.45);background:rgba(168,85,247,.06)}
+        .hn-pick hui-card-picker{display:block;max-height:60vh;overflow:auto;margin-top:6px}
+      `;
       const c = this._config;
-      const L = {
-        music_entity: "Mini lecteur Music Assistant (au-dessus de la barre)", music_show: "Afficher le mini lecteur", music_artwork: "Style de pochette dans le lecteur",
-        labels: "Libellés", desktop_position: "Position sur ordinateur", mobile_style: "Sur mobile", auto_hide: "Masquer en défilant", haptic: "Vibration", accent: "Couleur principale",
-        label: "Libellé", icon: "Icône", url: "Vue à ouvrir", color: "Couleur (#hex ou nom)", image: "Image (remplace l'icône)", entity: "Entité (état affiché sur la tuile)",
-        action: "Au toucher", perform_action: "Action (ex. script.bonne_nuit)", badge_entities: "Pastille : compter les entités actives", users: "Visible seulement pour (nom d'utilisateur)",
-        music: "Note de musique si lecture en cours + lecteurs à l'appui long", music_players: "Lecteurs surveillés (vide = tous ceux de Music Assistant)",
-      };
-      this.appendChild(this._form([
+      const langs = [{ value: "auto", label: this.t("o_auto") }, ...Object.entries(LANG_NAMES).map(([value, label]) => ({ value, label }))];
+      out.appendChild(this._form([
         { type: "grid", name: "", schema: [
-          { name: "labels", selector: { select: { mode: "dropdown", options: [{ value: "active", label: "Onglet actif" }, { value: "all", label: "Tous" }, { value: "none", label: "Aucun" }] } } },
-          { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: "Dockée en bas" }, { value: "floating", label: "Flottante" }] } } },
-          { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: "En bas" }, { value: "left", label: "À gauche" }, { value: "right", label: "À droite" }, { value: "hidden", label: "Masquée" }] } } },
+          { name: "labels", selector: { select: { mode: "dropdown", options: [{ value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } } },
+          { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } } },
+          { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
+        ] },
+        { type: "grid", name: "", schema: [
+          { name: "label_lines", selector: { select: { mode: "dropdown", options: [{ value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } } },
+          { name: "language", selector: { select: { mode: "dropdown", options: langs } } },
         ] },
         { type: "grid", name: "", schema: [
           { name: "auto_hide", selector: { boolean: {} } },
           { name: "haptic", selector: { boolean: {} } },
           { name: "accent", selector: { text: {} } },
         ] },
-      ], { ...DEFAULTS, ...c }, (v) => this._update((cc) => Object.assign(cc, pick(v, ["labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]))), L));
+      ], { ...DEFAULTS, language: "auto", ...c, label_lines: String(linesOf(c)) }, (v) => this._update((cc) => {
+        Object.assign(cc, pick(v, ["labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
+        const n = parseInt(v.label_lines, 10);
+        if (isNaN(n) || n === 2) delete cc.label_lines; else cc.label_lines = n;
+        const langChanged = (cc.language || "auto") !== (v.language || "auto");
+        if (!v.language || v.language === "auto") delete cc.language; else cc.language = v.language;
+        if (langChanged) setTimeout(() => this._render(), 0);
+      })));
       if (c.routes && c.routes.length) {
         const mh = document.createElement("div");
         mh.className = "hn-sec";
-        mh.innerHTML = `<ha-icon icon="mdi:music-circle-outline"></ha-icon>Mini lecteur de musique`;
-        this.appendChild(mh);
+        mh.innerHTML = `<ha-icon icon="mdi:music-circle-outline"></ha-icon>${this.t("sec_music")}`;
+        out.appendChild(mh);
         if (!customElements.get("holm-music-card")) {
           const w = document.createElement("div");
           w.className = "hn-note warn";
-          w.innerHTML = "⚠️ Les fonctions musique (mini lecteur, note de musique, lecteurs à l'appui long) nécessitent la carte <b>HOLM Music Card</b> et l'intégration <b>Music Assistant</b>. Installe <a href='https://github.com/kaaribou/holm-music-card' target='_blank' rel='noopener'>holm-music-card</a> depuis HACS puis recharge la page.";
-          this.appendChild(w);
+          w.innerHTML = this.t("warn_music");
+          out.appendChild(w);
         }
-        this.appendChild(this._form([
+        out.appendChild(this._form([
           { name: "music_entity", selector: { entity: { filter: { domain: "media_player", integration: "music_assistant" } } } },
           { type: "grid", name: "", schema: [
-            { name: "music_show", selector: { select: { mode: "dropdown", options: [{ value: "active", label: "Seulement pendant la lecture" }, { value: "always", label: "Toujours" }] } } },
-            { name: "music_artwork", selector: { select: { mode: "dropdown", options: [{ value: "square", label: "Pochette" }, { value: "vinyl", label: "Vinyle" }] } } },
+            { name: "music_show", selector: { select: { mode: "dropdown", options: [{ value: "active", label: this.t("o_only_playing") }, { value: "always", label: this.t("o_always") }] } } },
+            { name: "music_artwork", selector: { select: { mode: "dropdown", options: [{ value: "square", label: this.t("o_cover") }, { value: "vinyl", label: this.t("o_vinyl") }] } } },
           ] },
           { name: "music_players", selector: { entity: { multiple: true, filter: { domain: "media_player", integration: "music_assistant" } } } },
         ], { music_show: "active", music_artwork: "square", ...pick(c, ["music_entity", "music_show", "music_artwork", "music_players"]) }, (v) => this._update((cc) => {
@@ -862,86 +1541,35 @@
           ["music_entity", "music_show", "music_artwork"].forEach((k) => { if (v[k] == null || v[k] === "") delete cc[k]; else cc[k] = v[k]; });
           if (cc.music_show === "active") delete cc.music_show;
           if (cc.music_artwork === "square") delete cc.music_artwork;
-        }), L));
+        })));
       }
 
       if (!c.routes || !c.routes.length) {
         const n = document.createElement("div");
         n.className = "hn-note";
-        n.innerHTML = "Cette carte réutilise la <b>barre commune</b> définie sur la carte maître (celle qui contient les onglets). Pour modifier les onglets, édite la carte maître.";
-        this.appendChild(n);
+        n.innerHTML = this.t("note_common");
+        out.appendChild(n);
+        this.replaceChildren(out);
         return;
       }
       const h = document.createElement("div");
       h.className = "hn-sec";
-      h.innerHTML = `<ha-icon icon="mdi:dock-bottom"></ha-icon>Onglets de la barre`;
-      this.appendChild(h);
+      h.innerHTML = `<ha-icon icon="mdi:dock-bottom"></ha-icon>${this.t("sec_tabs")}`;
+      out.appendChild(h);
       const tip = document.createElement("div");
       tip.className = "hn-note";
-      tip.innerHTML = "Un onglet avec une <b>vue</b> y mène au toucher ; son <b>sous-menu</b> s'ouvre à l'appui long. Un onglet <b>sans vue</b> ouvre directement son sous-menu.";
-      this.appendChild(tip);
-
-      const itemSchema = (isSub) => [
-        { type: "grid", name: "", schema: [{ name: "label", selector: { text: {} } }, { name: "icon", selector: { icon: {} } }] },
-        { name: "url", selector: { navigation: {} } },
-        { type: "grid", name: "", schema: [{ name: "color", selector: { text: {} } }, { name: "action", selector: { select: { mode: "dropdown", options: ACTIONS } } }] },
-        { type: "expandable", name: "", title: isSub ? "Action / entité (tuile dynamique)" : "Pastille, image, visibilité", schema: isSub
-          ? [{ name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }]
-          : [{ name: "music", selector: { boolean: {} } }, { name: "badge_entities", selector: { entity: { multiple: true } } }, { name: "image", selector: { text: {} } }, { name: "users", selector: { text: { multiple: true } } }, { name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }] },
-      ];
-      c.routes.forEach((r, i) => {
-        const head = this._head(r, "Onglet " + (i + 1), [
-          this._btn("mdi:arrow-up", "Monter", () => i > 0 && this._update((cc) => cc.routes.splice(i - 1, 0, cc.routes.splice(i, 1)[0]), true)),
-          this._btn("mdi:arrow-down", "Descendre", () => i < c.routes.length - 1 && this._update((cc) => cc.routes.splice(i + 1, 0, cc.routes.splice(i, 1)[0]), true)),
-          this._btn("mdi:delete-outline", "Supprimer", () => this._update((cc) => cc.routes.splice(i, 1), true)),
-        ]);
-        const p = this._panel(`r${i}`, head);
-        const inner = document.createElement("div");
-        inner.className = "hn-in";
-        inner.appendChild(this._form(itemSchema(false), this._formData(r), (v) => {
-          this._update((cc) => { cc.routes[i] = this._itemFromForm(v, cc.routes[i]); head._ref(cc.routes[i]); });
-        }, L));
-
-        const sub = document.createElement("div");
-        sub.className = "hn-sub";
-        sub.innerHTML = `<div class="hn-subt">Sous-menu</div><div class="hn-subh">${r.url ? "S'ouvre à l'appui long sur l'onglet." : "S'ouvre au toucher (onglet sans vue)."}</div>`;
-        (r.popup || []).forEach((s, j) => {
-          const sh = this._head(s, "Élément " + (j + 1), [
-            this._btn("mdi:arrow-up", "Monter", () => j > 0 && this._update((cc) => { const a = cc.routes[i].popup; a.splice(j - 1, 0, a.splice(j, 1)[0]); }, true)),
-            this._btn("mdi:arrow-down", "Descendre", () => j < r.popup.length - 1 && this._update((cc) => { const a = cc.routes[i].popup; a.splice(j + 1, 0, a.splice(j, 1)[0]); }, true)),
-            this._btn("mdi:delete-outline", "Supprimer", () => this._update((cc) => { cc.routes[i].popup.splice(j, 1); if (!cc.routes[i].popup.length) delete cc.routes[i].popup; }, true)),
-          ]);
-          const sp = this._panel(`r${i}s${j}`, sh);
-          const si = document.createElement("div");
-          si.className = "hn-in";
-          si.appendChild(this._form(itemSchema(true), this._formData(s), (v) => {
-            this._update((cc) => { cc.routes[i].popup[j] = this._itemFromForm(v, cc.routes[i].popup[j]); sh._ref(cc.routes[i].popup[j]); });
-          }, L));
-          sp.appendChild(si);
-          sub.appendChild(sp);
-        });
-        const add = document.createElement("button");
-        add.className = "hn-add";
-        add.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>Ajouter au sous-menu`;
-        add.addEventListener("click", () => {
-          const j = (r.popup || []).length;
-          this._open.add(`r${i}`);
-          this._open.add(`r${i}s${j}`);
-          this._update((cc) => { cc.routes[i].popup = cc.routes[i].popup || []; cc.routes[i].popup.push({ label: "", icon: "mdi:star-outline" }); }, true);
-        });
-        sub.appendChild(add);
-        inner.appendChild(sub);
-        p.appendChild(inner);
-        this.appendChild(p);
-      });
+      tip.innerHTML = this.t("tip_tabs");
+      out.appendChild(tip);
+      c.routes.forEach((r, i) => this._itemPanel(out, ["routes", i], r, 0, i, c.routes.length));
       const addR = document.createElement("button");
       addR.className = "hn-add main";
-      addR.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>Ajouter un onglet`;
+      addR.innerHTML = `<ha-icon icon="mdi:plus"></ha-icon>${this.t("add_tab")}`;
       addR.addEventListener("click", () => {
-        this._open.add(`r${c.routes.length}`);
+        this._open.add(`routes.${c.routes.length}`);
         this._update((cc) => cc.routes.push({ label: "", icon: "mdi:star-outline" }), true);
       });
-      this.appendChild(addR);
+      out.appendChild(addR);
+      this.replaceChildren(out);
     }
   }
 
@@ -949,7 +1577,7 @@
   if (!customElements.get("holm-navbar-card-editor")) customElements.define("holm-navbar-card-editor", HolmNavbarCardEditor);
   window.customCards = window.customCards || [];
   if (!window.customCards.some((c) => c.type === "holm-navbar-card")) {
-    window.customCards.push({ type: "holm-navbar-card", name: "HOLM Navbar", description: "Barre de navigation flottante en verre, animée, commune à toutes les vues.", preview: false });
+    window.customCards.push({ type: "holm-navbar-card", name: "HOLM Navbar", description: tr(langOf(null, null), "card_desc"), preview: false });
   }
   console.info(`%c HOLM-NAVBAR %c ${VERSION} `, "background:#26c6da;color:#fff;border-radius:3px 0 0 3px", "background:#123;color:#fff;border-radius:0 3px 3px 0");
 })();
