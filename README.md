@@ -138,7 +138,7 @@ En mode édition, la carte s'affiche comme un petit aperçu (« carte maître »
 |---|---|
 | **Libellé** | Texte sous l'icône (affiché selon l'option *Libellés*). |
 | **Icône** / **Image** | Une icône `mdi:` ou une image (`/local/…png`) qui la remplace. |
-| **Couleur** | `#hex`, `rgb(…)` ou un nom de couleur de thème (`red`, `amber`…). Colore l'icône et la bulle. |
+| **Couleur** | Roue des couleurs, ou `#hex`, `rgb(…)` ou un nom de couleur de thème (`red`, `amber`…). Colore l'icône et la bulle. |
 | **Vue à ouvrir** | Le chemin de la vue (`/lovelace/lumieres`). L'onglet s'allume quand on est sur cette vue **ou** sur une vue de son sous-menu. |
 | **Au toucher** | Aller à une vue (par défaut), basculer l'entité, ouvrir sa fiche, lancer une action… |
 | **Pastille** | Entités à compter (voir [Pastilles](#pastilles)). |
@@ -255,6 +255,7 @@ Dans la section **Mini lecteur de musique** de la carte maître :
 
 | Option | Valeurs | Par défaut |
 |---|---|---|
+| `theme` | Apparence : `auto` (suit le mode clair / sombre), `dark`, `light`, `theme` (couleurs de votre thème) | `auto` |
 | `labels` | `active` (onglet actif), `all`, `none` | `active` |
 | `mobile_style` | `docked` (collée en bas), `floating` | `docked` |
 | `desktop_position` | `bottom`, `left`, `right`, `hidden` | `bottom` |

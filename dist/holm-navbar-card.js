@@ -12,9 +12,9 @@
  * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.6.1";
+  const VERSION = "1.6.2";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
-  const DEFAULTS = { labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
+  const DEFAULTS = { theme: "auto", labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
   const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
   const store = (window.__holmNavbar = window.__holmNavbar || { cfg: {}, bar: null, owner: null });
 
@@ -33,8 +33,8 @@
       preview_note: "La barre s'affiche en bas de l'écran.",
       card_desc: "Barre de navigation flottante en verre, animée, commune à toutes les vues.", home: "Accueil", lights: "Lumières",
       f_music_entity: "Mini lecteur Music Assistant (au-dessus de la barre)", f_music_show: "Afficher le mini lecteur", f_music_artwork: "Style de pochette dans le lecteur",
-      f_labels: "Libellés", f_desktop_position: "Position sur ordinateur", f_mobile_style: "Sur mobile", f_auto_hide: "Masquer en défilant", f_haptic: "Vibration", f_accent: "Couleur principale",
-      f_label: "Libellé", f_icon: "Icône", f_url: "Vue à ouvrir", f_color: "Couleur (#hex ou nom)", f_image: "Image (remplace l'icône)", f_entity: "Entité (état affiché sur la tuile)",
+      f_labels: "Libellés", f_desktop_position: "Position sur ordinateur", f_mobile_style: "Sur mobile", f_auto_hide: "Masquer en défilant", f_haptic: "Vibration", f_accent: "Couleur principale", f_theme: "Apparence", o_tauto: "Automatique (mode clair / sombre)", o_tdark: "Sombre", o_tlight: "Clair", o_ttheme: "Couleurs de mon thème",
+      f_label: "Libellé", f_icon: "Icône", f_url: "Vue à ouvrir", f_color_pick: "Couleur", f_color: "Couleur (#hex ou nom)", f_image: "Image (remplace l'icône)", f_entity: "Entité (état affiché sur la tuile)",
       f_action: "Au toucher", f_perform_action: "Action (ex. script.bonne_nuit)", f_badge_entities: "Pastille : compter les entités actives", f_users: "Visible seulement pour (nom d'utilisateur)",
       f_music: "Note de musique si lecture en cours + lecteurs à l'appui long", f_music_players: "Lecteurs surveillés (vide = tous ceux de Music Assistant)",
       f_label_lines: "Lignes des libellés", f_language: "Langue", f_cards_position: "Position des cartes",
@@ -67,8 +67,8 @@
       preview_note: "The bar is shown at the bottom of the screen.",
       card_desc: "Floating, animated glass navigation bar shared by every view.", home: "Home", lights: "Lights",
       f_music_entity: "Music Assistant mini player (above the bar)", f_music_show: "Show the mini player", f_music_artwork: "Artwork style in the player",
-      f_labels: "Labels", f_desktop_position: "Position on desktop", f_mobile_style: "On mobile", f_auto_hide: "Hide on scroll", f_haptic: "Vibration", f_accent: "Main colour",
-      f_label: "Label", f_icon: "Icon", f_url: "View to open", f_color: "Colour (#hex or name)", f_image: "Image (replaces the icon)", f_entity: "Entity (state shown on the tile)",
+      f_labels: "Labels", f_desktop_position: "Position on desktop", f_mobile_style: "On mobile", f_auto_hide: "Hide on scroll", f_haptic: "Vibration", f_accent: "Main colour", f_theme: "Appearance", o_tauto: "Automatic (light / dark mode)", o_tdark: "Dark", o_tlight: "Light", o_ttheme: "My theme colours",
+      f_label: "Label", f_icon: "Icon", f_url: "View to open", f_color_pick: "Colour", f_color: "Colour (#hex or name)", f_image: "Image (replaces the icon)", f_entity: "Entity (state shown on the tile)",
       f_action: "On tap", f_perform_action: "Action (e.g. script.good_night)", f_badge_entities: "Badge: count active entities", f_users: "Only visible to (user name)",
       f_music: "Music note while playing + players on long press", f_music_players: "Watched players (empty = all Music Assistant players)",
       f_label_lines: "Label lines", f_language: "Language", f_cards_position: "Cards position",
@@ -101,8 +101,8 @@
       preview_note: "Die Leiste wird unten am Bildschirm angezeigt.",
       card_desc: "Schwebende, animierte Glas-Navigationsleiste für alle Ansichten.", home: "Start", lights: "Licht",
       f_music_entity: "Music-Assistant-Miniplayer (über der Leiste)", f_music_show: "Miniplayer anzeigen", f_music_artwork: "Cover-Stil im Player",
-      f_labels: "Beschriftungen", f_desktop_position: "Position am Computer", f_mobile_style: "Auf dem Handy", f_auto_hide: "Beim Scrollen ausblenden", f_haptic: "Vibration", f_accent: "Hauptfarbe",
-      f_label: "Beschriftung", f_icon: "Symbol", f_url: "Zu öffnende Ansicht", f_color: "Farbe (#hex oder Name)", f_image: "Bild (ersetzt das Symbol)", f_entity: "Entität (Zustand auf der Kachel)",
+      f_labels: "Beschriftungen", f_desktop_position: "Position am Computer", f_mobile_style: "Auf dem Handy", f_auto_hide: "Beim Scrollen ausblenden", f_haptic: "Vibration", f_accent: "Hauptfarbe", f_theme: "Darstellung", o_tauto: "Automatisch (hell / dunkel)", o_tdark: "Dunkel", o_tlight: "Hell", o_ttheme: "Farben meines Themas",
+      f_label: "Beschriftung", f_icon: "Symbol", f_url: "Zu öffnende Ansicht", f_color_pick: "Farbe", f_color: "Farbe (#hex oder Name)", f_image: "Bild (ersetzt das Symbol)", f_entity: "Entität (Zustand auf der Kachel)",
       f_action: "Beim Tippen", f_perform_action: "Aktion (z. B. script.gute_nacht)", f_badge_entities: "Plakette: aktive Entitäten zählen", f_users: "Nur sichtbar für (Benutzername)",
       f_music: "Musiknote bei Wiedergabe + Player bei langem Drücken", f_music_players: "Überwachte Player (leer = alle von Music Assistant)",
       f_label_lines: "Zeilen der Beschriftung", f_language: "Sprache", f_cards_position: "Position der Karten",
@@ -135,8 +135,8 @@
       preview_note: "La barra se muestra en la parte inferior de la pantalla.",
       card_desc: "Barra de navegación flotante de cristal, animada, común a todas las vistas.", home: "Inicio", lights: "Luces",
       f_music_entity: "Mini reproductor de Music Assistant (encima de la barra)", f_music_show: "Mostrar el mini reproductor", f_music_artwork: "Estilo de carátula en el reproductor",
-      f_labels: "Etiquetas", f_desktop_position: "Posición en ordenador", f_mobile_style: "En el móvil", f_auto_hide: "Ocultar al desplazar", f_haptic: "Vibración", f_accent: "Color principal",
-      f_label: "Etiqueta", f_icon: "Icono", f_url: "Vista que abrir", f_color: "Color (#hex o nombre)", f_image: "Imagen (sustituye al icono)", f_entity: "Entidad (estado mostrado en el mosaico)",
+      f_labels: "Etiquetas", f_desktop_position: "Posición en ordenador", f_mobile_style: "En el móvil", f_auto_hide: "Ocultar al desplazar", f_haptic: "Vibración", f_accent: "Color principal", f_theme: "Apariencia", o_tauto: "Automática (modo claro / oscuro)", o_tdark: "Oscura", o_tlight: "Clara", o_ttheme: "Colores de mi tema",
+      f_label: "Etiqueta", f_icon: "Icono", f_url: "Vista que abrir", f_color_pick: "Color", f_color: "Color (#hex o nombre)", f_image: "Imagen (sustituye al icono)", f_entity: "Entidad (estado mostrado en el mosaico)",
       f_action: "Al tocar", f_perform_action: "Acción (p. ej. script.buenas_noches)", f_badge_entities: "Indicador: contar entidades activas", f_users: "Visible solo para (nombre de usuario)",
       f_music: "Nota musical si hay reproducción + reproductores con pulsación larga", f_music_players: "Reproductores vigilados (vacío = todos los de Music Assistant)",
       f_label_lines: "Líneas de las etiquetas", f_language: "Idioma", f_cards_position: "Posición de las tarjetas",
@@ -169,8 +169,8 @@
       preview_note: "La barra viene mostrata in fondo allo schermo.",
       card_desc: "Barra di navigazione fluttuante in vetro, animata, comune a tutte le viste.", home: "Home", lights: "Luci",
       f_music_entity: "Mini lettore Music Assistant (sopra la barra)", f_music_show: "Mostra il mini lettore", f_music_artwork: "Stile della copertina nel lettore",
-      f_labels: "Etichette", f_desktop_position: "Posizione su computer", f_mobile_style: "Su smartphone", f_auto_hide: "Nascondi scorrendo", f_haptic: "Vibrazione", f_accent: "Colore principale",
-      f_label: "Etichetta", f_icon: "Icona", f_url: "Vista da aprire", f_color: "Colore (#hex o nome)", f_image: "Immagine (sostituisce l'icona)", f_entity: "Entità (stato mostrato sul riquadro)",
+      f_labels: "Etichette", f_desktop_position: "Posizione su computer", f_mobile_style: "Su smartphone", f_auto_hide: "Nascondi scorrendo", f_haptic: "Vibrazione", f_accent: "Colore principale", f_theme: "Aspetto", o_tauto: "Automatico (chiaro / scuro)", o_tdark: "Scuro", o_tlight: "Chiaro", o_ttheme: "Colori del mio tema",
+      f_label: "Etichetta", f_icon: "Icona", f_url: "Vista da aprire", f_color_pick: "Colore", f_color: "Colore (#hex o nome)", f_image: "Immagine (sostituisce l'icona)", f_entity: "Entità (stato mostrato sul riquadro)",
       f_action: "Al tocco", f_perform_action: "Azione (es. script.buonanotte)", f_badge_entities: "Badge: conta le entità attive", f_users: "Visibile solo per (nome utente)",
       f_music: "Nota musicale durante la riproduzione + lettori con pressione lunga", f_music_players: "Lettori monitorati (vuoto = tutti quelli di Music Assistant)",
       f_label_lines: "Righe delle etichette", f_language: "Lingua", f_cards_position: "Posizione delle schede",
@@ -203,8 +203,8 @@
       preview_note: "De balk verschijnt onderaan het scherm.",
       card_desc: "Zwevende, geanimeerde glazen navigatiebalk voor alle weergaven.", home: "Start", lights: "Lampen",
       f_music_entity: "Music Assistant-minispeler (boven de balk)", f_music_show: "Minispeler tonen", f_music_artwork: "Hoesstijl in de speler",
-      f_labels: "Labels", f_desktop_position: "Positie op computer", f_mobile_style: "Op mobiel", f_auto_hide: "Verbergen bij scrollen", f_haptic: "Trilling", f_accent: "Hoofdkleur",
-      f_label: "Label", f_icon: "Pictogram", f_url: "Te openen weergave", f_color: "Kleur (#hex of naam)", f_image: "Afbeelding (vervangt het pictogram)", f_entity: "Entiteit (status op de tegel)",
+      f_labels: "Labels", f_desktop_position: "Positie op computer", f_mobile_style: "Op mobiel", f_auto_hide: "Verbergen bij scrollen", f_haptic: "Trilling", f_accent: "Hoofdkleur", f_theme: "Weergave", o_tauto: "Automatisch (licht / donker)", o_tdark: "Donker", o_tlight: "Licht", o_ttheme: "Kleuren van mijn thema",
+      f_label: "Label", f_icon: "Pictogram", f_url: "Te openen weergave", f_color_pick: "Kleur", f_color: "Kleur (#hex of naam)", f_image: "Afbeelding (vervangt het pictogram)", f_entity: "Entiteit (status op de tegel)",
       f_action: "Bij tikken", f_perform_action: "Actie (bijv. script.welterusten)", f_badge_entities: "Badge: actieve entiteiten tellen", f_users: "Alleen zichtbaar voor (gebruikersnaam)",
       f_music: "Muzieknoot tijdens afspelen + spelers bij lang indrukken", f_music_players: "Gevolgde spelers (leeg = alle van Music Assistant)",
       f_label_lines: "Regels van de labels", f_language: "Taal", f_cards_position: "Positie van de kaarten",
@@ -237,8 +237,8 @@
       preview_note: "A barra é mostrada na parte inferior do ecrã.",
       card_desc: "Barra de navegação flutuante em vidro, animada, comum a todas as vistas.", home: "Início", lights: "Luzes",
       f_music_entity: "Mini leitor do Music Assistant (acima da barra)", f_music_show: "Mostrar o mini leitor", f_music_artwork: "Estilo da capa no leitor",
-      f_labels: "Etiquetas", f_desktop_position: "Posição no computador", f_mobile_style: "No telemóvel", f_auto_hide: "Ocultar ao deslizar", f_haptic: "Vibração", f_accent: "Cor principal",
-      f_label: "Etiqueta", f_icon: "Ícone", f_url: "Vista a abrir", f_color: "Cor (#hex ou nome)", f_image: "Imagem (substitui o ícone)", f_entity: "Entidade (estado mostrado no mosaico)",
+      f_labels: "Etiquetas", f_desktop_position: "Posição no computador", f_mobile_style: "No telemóvel", f_auto_hide: "Ocultar ao deslizar", f_haptic: "Vibração", f_accent: "Cor principal", f_theme: "Aparência", o_tauto: "Automática (claro / escuro)", o_tdark: "Escura", o_tlight: "Clara", o_ttheme: "Cores do meu tema",
+      f_label: "Etiqueta", f_icon: "Ícone", f_url: "Vista a abrir", f_color_pick: "Cor", f_color: "Cor (#hex ou nome)", f_image: "Imagem (substitui o ícone)", f_entity: "Entidade (estado mostrado no mosaico)",
       f_action: "Ao tocar", f_perform_action: "Ação (ex. script.boa_noite)", f_badge_entities: "Indicador: contar entidades ativas", f_users: "Visível apenas para (nome de utilizador)",
       f_music: "Nota musical durante a reprodução + leitores com toque longo", f_music_players: "Leitores vigiados (vazio = todos os do Music Assistant)",
       f_label_lines: "Linhas das etiquetas", f_language: "Idioma", f_cards_position: "Posição dos cartões",
@@ -271,8 +271,8 @@
       preview_note: "Pasek jest wyświetlany na dole ekranu.",
       card_desc: "Pływający, animowany szklany pasek nawigacji wspólny dla wszystkich widoków.", home: "Start", lights: "Światła",
       f_music_entity: "Miniodtwarzacz Music Assistant (nad paskiem)", f_music_show: "Pokaż miniodtwarzacz", f_music_artwork: "Styl okładki w odtwarzaczu",
-      f_labels: "Etykiety", f_desktop_position: "Pozycja na komputerze", f_mobile_style: "Na telefonie", f_auto_hide: "Ukryj podczas przewijania", f_haptic: "Wibracje", f_accent: "Kolor główny",
-      f_label: "Etykieta", f_icon: "Ikona", f_url: "Widok do otwarcia", f_color: "Kolor (#hex lub nazwa)", f_image: "Obraz (zastępuje ikonę)", f_entity: "Encja (stan na kafelku)",
+      f_labels: "Etykiety", f_desktop_position: "Pozycja na komputerze", f_mobile_style: "Na telefonie", f_auto_hide: "Ukryj podczas przewijania", f_haptic: "Wibracje", f_accent: "Kolor główny", f_theme: "Wygląd", o_tauto: "Automatyczny (jasny / ciemny)", o_tdark: "Ciemny", o_tlight: "Jasny", o_ttheme: "Kolory mojego motywu",
+      f_label: "Etykieta", f_icon: "Ikona", f_url: "Widok do otwarcia", f_color_pick: "Kolor", f_color: "Kolor (#hex lub nazwa)", f_image: "Obraz (zastępuje ikonę)", f_entity: "Encja (stan na kafelku)",
       f_action: "Po dotknięciu", f_perform_action: "Akcja (np. script.dobranoc)", f_badge_entities: "Plakietka: licz aktywne encje", f_users: "Widoczne tylko dla (nazwa użytkownika)",
       f_music: "Nuta podczas odtwarzania + odtwarzacze po długim naciśnięciu", f_music_players: "Obserwowane odtwarzacze (puste = wszystkie z Music Assistant)",
       f_label_lines: "Wiersze etykiet", f_language: "Język", f_cards_position: "Pozycja kart",
@@ -312,6 +312,21 @@
     if (c.startsWith("#") || c.startsWith("rgb") || c.startsWith("hsl") || c.startsWith("var(")) return c;
     return `var(--${c}-color, ${c})`;
   };
+  // couleur → [r, g, b] pour le sélecteur de couleur (roue) ; accepte aussi les noms (« red », « teal »…)
+  const toRgb = (c) => {
+    if (!c) return null;
+    let m = String(c).trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (m) { let h = m[1]; if (h.length === 3) h = h.split("").map((x) => x + x).join(""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); }
+    m = String(c).match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/i);
+    if (m) return [+m[1], +m[2], +m[3]];
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(`--${c}-color`).trim() || c;
+      const cv = document.createElement("canvas").getContext("2d"); cv.fillStyle = "#000"; cv.fillStyle = v;
+      const f = cv.fillStyle; if (/^#[0-9a-f]{6}$/i.test(f) && (f !== "#000000" || /black|^#0{3,6}$/i.test(v))) return toRgb(f);
+    } catch (e) { /* ignore */ }
+    return null;
+  };
+  const toHex = (rgb) => (Array.isArray(rgb) && rgb.length === 3 ? "#" + rgb.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("") : "");
   const dashOf = (path) => (path || location.pathname).split("/")[1] || "lovelace";
   const norm = (u) => (u || "").replace(/\/+$/, "").toLowerCase();
   const routeUrl = (r) => r.url || (r.tap_action && r.tap_action.action === "navigate" && r.tap_action.navigation_path) || null;
@@ -403,12 +418,20 @@
       this.dash = dash;
       this.hass = hass;
       if (changed) { this._key = null; this._cardCache.clear(); }
+      this._tone();
       this.render();
       this._music();
       this._checkScope();
     }
+    // apparence : sombre, claire, ou couleurs du thème Home Assistant ; « auto » suit le mode clair / sombre
+    _tone() {
+      const t = (this.config && this.config.theme) || "auto";
+      const tone = t === "auto" ? (this.hass && this.hass.themes && this.hass.themes.darkMode === false ? "light" : "dark") : t;
+      if (this.dataset.tone !== tone) this.dataset.tone = tone;
+    }
     set hassUpdate(hass) {
       this.hass = hass;
+      this._tone();
       this._updateLive();
       this._music();
     }
@@ -1000,6 +1023,38 @@
       .tile.on { background: linear-gradient(160deg, color-mix(in srgb, var(--c) 30%, transparent), color-mix(in srgb, var(--c) 10%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 6px 18px -8px var(--c); }
       .tile.on .ti { background: var(--c); color: #fff; }
       .tile.on .ts, .tile.on .chev { color: #fff; }
+      /* apparence claire */
+      :host([data-tone="light"]) .dock { background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(236,241,245,.88)); border-color: rgba(15,30,40,.10); box-shadow: 0 14px 40px rgba(20,40,60,.18), inset 0 1px 0 rgba(255,255,255,.9); }
+      :host([data-tone="light"]) .dock::before { background: radial-gradient(120% 140% at 50% -40%, rgba(255,255,255,.6), transparent 55%); }
+      :host([data-tone="light"][data-docked="1"]) .dock { box-shadow: 0 -8px 30px rgba(20,40,60,.14), inset 0 1px 0 rgba(255,255,255,.9); }
+      :host([data-tone="light"]) .it { color: rgba(27,39,48,.62); }
+      :host([data-tone="light"]) .ic { filter: saturate(.95) brightness(.88); }
+      :host([data-tone="light"]) .lb, :host([data-tone="light"]) .tl, :host([data-tone="light"]) .crumbs .cur { color: #14222b; }
+      :host([data-tone="light"]) .badge, :host([data-tone="light"]) .badge.mnote { box-shadow: 0 0 0 2px rgba(255,255,255,.95); }
+      :host([data-tone="light"]) .scrim { background: rgba(20,30,40,.18); }
+      :host([data-tone="light"]) .pop { background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(238,243,246,.92)); border-color: rgba(15,30,40,.10); box-shadow: 0 20px 50px rgba(20,40,60,.22), inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); }
+      :host([data-tone="light"]) .pop-h, :host([data-tone="light"]) .pl-t { color: rgba(27,39,48,.7); }
+      :host([data-tone="light"]) .pop-h .bk { background: rgba(15,30,40,.06); color: #14222b; }
+      :host([data-tone="light"]) .pop-h .bk:hover { background: rgba(15,30,40,.12); }
+      :host([data-tone="light"]) .players:not([hidden]) ~ .grid:not([hidden]), :host([data-tone="light"]) .players:not([hidden]) ~ .cards:not([hidden]) { border-top-color: rgba(15,30,40,.08); }
+      :host([data-tone="light"]) .pl-e { color: rgba(27,39,48,.7); background: rgba(15,30,40,.03); box-shadow: inset 0 0 0 1px rgba(15,30,40,.07); }
+      :host([data-tone="light"]) .tile { background: linear-gradient(160deg, rgba(255,255,255,.9), rgba(255,255,255,.6)); box-shadow: inset 0 0 0 1px rgba(15,30,40,.08), 0 2px 8px -4px rgba(20,40,60,.15); }
+      :host([data-tone="light"]) .ts { color: rgba(27,39,48,.6); }
+      :host([data-tone="light"]) .chev { color: rgba(27,39,48,.4); }
+      :host([data-tone="light"]) .tile.on .ts, :host([data-tone="light"]) .tile.on .chev { color: color-mix(in srgb, var(--c) 55%, #0b1a22); }
+      /* couleurs du thème Home Assistant */
+      :host([data-tone="theme"]) .dock { background: color-mix(in srgb, var(--card-background-color, #1c1c1c) 84%, transparent); border-color: var(--divider-color, rgba(127,127,127,.25)); box-shadow: 0 14px 40px rgba(0,0,0,.28); }
+      :host([data-tone="theme"]) .dock::before { background: none; }
+      :host([data-tone="theme"]) .it, :host([data-tone="theme"]) .pop-h, :host([data-tone="theme"]) .pl-t, :host([data-tone="theme"]) .ts, :host([data-tone="theme"]) .chev, :host([data-tone="theme"]) .pl-e { color: var(--secondary-text-color, #888); }
+      :host([data-tone="theme"]) .lb, :host([data-tone="theme"]) .tl, :host([data-tone="theme"]) .crumbs .cur { color: var(--primary-text-color, #222); }
+      :host([data-tone="theme"]) .ic { filter: none; }
+      :host([data-tone="theme"]) .badge, :host([data-tone="theme"]) .badge.mnote { box-shadow: 0 0 0 2px var(--card-background-color, #1c1c1c); }
+      :host([data-tone="theme"]) .pop { background: color-mix(in srgb, var(--card-background-color, #1c1c1c) 94%, transparent); border-color: var(--divider-color, rgba(127,127,127,.25)); box-shadow: 0 20px 50px rgba(0,0,0,.3), 0 0 0 1px color-mix(in srgb, var(--c) 18%, transparent); }
+      :host([data-tone="theme"]) .pop-h .bk { background: color-mix(in srgb, var(--primary-text-color, #888) 8%, transparent); color: var(--primary-text-color, #222); }
+      :host([data-tone="theme"]) .players:not([hidden]) ~ .grid:not([hidden]), :host([data-tone="theme"]) .players:not([hidden]) ~ .cards:not([hidden]) { border-top-color: var(--divider-color, rgba(127,127,127,.25)); }
+      :host([data-tone="theme"]) .pl-e { background: color-mix(in srgb, var(--primary-text-color, #888) 4%, transparent); box-shadow: inset 0 0 0 1px var(--divider-color, rgba(127,127,127,.2)); }
+      :host([data-tone="theme"]) .tile { background: color-mix(in srgb, var(--primary-text-color, #888) 5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-text-color, #888) 10%, transparent); }
+      :host([data-tone="theme"]) .tile.on .ts, :host([data-tone="theme"]) .tile.on .chev { color: var(--primary-text-color, #222); }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .tile, .cw { opacity: 1; transform: none; } }`;
     }
   }
@@ -1236,9 +1291,15 @@
       p.expanded = this._open.has(key);
       let built = false;
       const fill = () => { if (built || !build) return; built = true; const el = build(); if (el) p.appendChild(el); };
+      // le contenu est construit AVANT que le panneau mesure sa hauteur (sinon il déborde par-dessus les lignes suivantes)
+      p.addEventListener("expanded-will-change", (e) => { if (e.target === p && e.detail.expanded) fill(); });
       p.addEventListener("expanded-changed", (e) => {
         if (e.target !== p) return;
-        if (e.detail.expanded) { this._open.add(key); fill(); } else this._open.delete(key);
+        if (e.detail.expanded) {
+          this._open.add(key); fill();
+          // filet de sécurité : hauteur libérée une fois l'animation passée
+          setTimeout(() => { const box = p.shadowRoot && p.shadowRoot.querySelector(".container"); if (box && p.expanded) { box.style.removeProperty("height"); box.style.overflow = "initial"; } }, 400);
+        } else this._open.delete(key);
       });
       header.slot = "header";
       p.appendChild(header);
@@ -1247,6 +1308,9 @@
     }
     _itemFromForm(v, old) {
       const o = { ...old };
+      // roue des couleurs : si elle a bougé, elle l'emporte sur le champ texte
+      const picked = toHex(v.color_pick);
+      if (picked && picked !== toHex(toRgb(old.color || old.icon_color))) v = { ...v, color: picked };
       ["label", "icon", "url", "entity", "color", "image"].forEach((k) => { if (v[k] === "" || v[k] == null) delete o[k]; else o[k] = v[k]; });
       const act = v.action || "navigate";
       if (act === "navigate") delete o.tap_action;
@@ -1264,6 +1328,7 @@
       return {
         label: it.label || "", icon: it.icon || "", url: it.url || "", entity: it.entity || "", image: it.image || "",
         color: it.color || it.icon_color || "",
+        color_pick: toRgb(it.color || it.icon_color) || undefined,
         action: (it.tap_action && it.tap_action.action) || "navigate",
         perform_action: (it.tap_action && it.tap_action.perform_action) || "",
         badge_entities: (it.badge && it.badge.entities) || [],
@@ -1313,7 +1378,8 @@
       return [
         { type: "grid", name: "", schema: [{ name: "label", selector: { text: {} } }, { name: "icon", selector: { icon: {} } }] },
         { name: "url", selector: { navigation: {} } },
-        { type: "grid", name: "", schema: [{ name: "color", selector: { text: {} } }, { name: "action", selector: { select: { mode: "dropdown", options: ACTIONS } } }] },
+        { type: "grid", name: "", schema: [{ name: "color_pick", selector: { color_rgb: {} } }, { name: "color", selector: { text: {} } }] },
+        { name: "action", selector: { select: { mode: "dropdown", options: ACTIONS } } },
         { type: "expandable", name: "", title: isSub ? this.t("exp_tile") : this.t("exp_tab"), schema: isSub
           ? [{ name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }]
           : [{ name: "music", selector: { boolean: {} } }, { name: "badge_entities", selector: { entity: { multiple: true } } }, { name: "image", selector: { text: {} } }, { name: "users", selector: { text: { multiple: true } } }, { name: "entity", selector: { entity: {} } }, { name: "perform_action", selector: { text: {} } }] },
@@ -1610,6 +1676,7 @@
           { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
         ] },
         { type: "grid", name: "", schema: [
+          { name: "theme", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } } },
           { name: "label_lines", selector: { select: { mode: "dropdown", options: [{ value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } } },
           { name: "language", selector: { select: { mode: "dropdown", options: langs } } },
         ] },
@@ -1619,7 +1686,7 @@
           { name: "accent", selector: { text: {} } },
         ] },
       ], { ...DEFAULTS, language: "auto", ...c, label_lines: String(linesOf(c)) }, (v) => this._update((cc) => {
-        Object.assign(cc, pick(v, ["labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
+        Object.assign(cc, pick(v, ["theme", "labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
         const n = parseInt(v.label_lines, 10);
         if (isNaN(n) || n === 2) delete cc.label_lines; else cc.label_lines = n;
         const langChanged = (cc.language || "auto") !== (v.language || "auto");

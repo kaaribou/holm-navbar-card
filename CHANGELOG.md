@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.2
+- **Éditeur** : un onglet ou une tuile déplié ne s'affiche plus par-dessus les lignes suivantes (le contenu est construit avant que le panneau calcule sa hauteur).
+- **Apparence claire, sombre ou couleurs du thème** : nouvelle option *Apparence* (`theme` : `auto`, `dark`, `light`, `theme`). En automatique, la barre et ses panneaux suivent le mode clair / sombre de Home Assistant.
+- **Roue des couleurs** pour la couleur de l'icône, à côté du champ texte qui accepte toujours `#hex`, `rgb(…)` ou un nom de couleur (`red`, `amber`…).
+
 ## 1.6.1
 - **Éditeur beaucoup plus rapide** : le contenu des onglets, tuiles et cartes n'est construit qu'à leur ouverture ; une modification ne reconstruit plus que l'élément concerné ; les allers-retours de configuration avec Home Assistant ne reconstruisent plus l'éditeur.
 - **Sélecteur de cartes rapide** : liste filtrable des cartes Home Assistant et personnalisées, ouverte instantanément ; le sélecteur complet (avec aperçus) reste disponible.
