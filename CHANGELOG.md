@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0
+- **Une même barre pour plusieurs tableaux de bord** (#7) : nouvel identifiant `navbar_id` sur la carte maître ; dans un autre tableau de bord, une carte HOLM Navbar avec le même identifiant reprend ses onglets. Choix de la barre dans une liste dans l'éditeur.
+- **Réglages propres à chaque vue** : une carte qui reprend une barre ne garde que les réglages choisis (couleur, apparence, libellés, lignes, position, masquage, vibration) ; « Comme la carte maître » hérite du reste.
+- **Correctif** (#7) : la barre ne disparaît plus en naviguant entre deux tableaux de bord qui contiennent la même carte maître.
+- La barre partagée est mémorisée sur l'appareil pour s'afficher immédiatement, puis mise à jour si la carte maître change.
+
 ## 1.6.2
 - **Éditeur** : un onglet ou une tuile déplié ne s'affiche plus par-dessus les lignes suivantes (le contenu est construit avant que le panneau calcule sa hauteur).
 - **Apparence claire, sombre ou couleurs du thème** : nouvelle option *Apparence* (`theme` : `auto`, `dark`, `light`, `theme`). En automatique, la barre et ses panneaux suivent le mode clair / sombre de Home Assistant.

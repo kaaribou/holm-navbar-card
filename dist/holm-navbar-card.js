@@ -12,7 +12,7 @@
  * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.6.2";
+  const VERSION = "1.7.0";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
   const DEFAULTS = { theme: "auto", labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
   const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
@@ -30,6 +30,11 @@
       back: "Retour", preview_title: "Barre de navigation HOLM", master: "carte maître", common: "config commune", no_tabs: "aucun onglet",
       edit_master: "Clique sur cette carte (crayon) pour modifier les onglets de toutes les vues.",
       edit_common: "Cette vue réutilise la barre définie sur la carte maître (celle qui contient les onglets).",
+      f_navbar_id: "Identifiant de la barre", f_navbar_ref: "Barre à reprendre", f_override: "Réglages propres à cette vue",
+      o_this_dash: "Carte maître de ce tableau de bord", id_master: "Donnez un identifiant (ex. <b>principale</b>) pour réutiliser cette barre dans <b>d'autres tableaux de bord</b> : il suffira d'y poser une carte HOLM Navbar qui reprend cet identifiant.",
+      id_child: "Choisissez la barre à reprendre : celle de ce tableau de bord, ou une barre d'un <b>autre tableau de bord</b> par son identifiant. Les onglets se modifient sur sa carte maître.",
+      sec_override: "Réglages propres à cette vue (facultatif)", note_override: "Laissez « Comme la carte maître » pour hériter du réglage.", o_inherit: "Comme la carte maître", o_yes: "Oui", o_no: "Non",
+      id_missing: (id) => `Aucune barre avec l'identifiant « ${id} » trouvée pour l'instant.`,
       preview_note: "La barre s'affiche en bas de l'écran.",
       card_desc: "Barre de navigation flottante en verre, animée, commune à toutes les vues.", home: "Accueil", lights: "Lumières",
       f_music_entity: "Mini lecteur Music Assistant (au-dessus de la barre)", f_music_show: "Afficher le mini lecteur", f_music_artwork: "Style de pochette dans le lecteur",
@@ -64,6 +69,11 @@
       back: "Back", preview_title: "HOLM navigation bar", master: "main card", common: "shared config", no_tabs: "no tabs",
       edit_master: "Click this card (pencil) to edit the tabs of every view.",
       edit_common: "This view reuses the bar defined on the main card (the one holding the tabs).",
+      f_navbar_id: "Bar ID", f_navbar_ref: "Bar to reuse", f_override: "Settings for this view",
+      o_this_dash: "Main card of this dashboard", id_master: "Give an ID (e.g. <b>main</b>) to reuse this bar in <b>other dashboards</b>: just add a HOLM Navbar card there that refers to this ID.",
+      id_child: "Choose the bar to reuse: the one of this dashboard, or a bar from <b>another dashboard</b> by its ID. Tabs are edited on its main card.",
+      sec_override: "Settings for this view (optional)", note_override: "Leave “Same as main card” to inherit the setting.", o_inherit: "Same as main card", o_yes: "Yes", o_no: "No",
+      id_missing: (id) => `No bar with the ID “${id}” found yet.`,
       preview_note: "The bar is shown at the bottom of the screen.",
       card_desc: "Floating, animated glass navigation bar shared by every view.", home: "Home", lights: "Lights",
       f_music_entity: "Music Assistant mini player (above the bar)", f_music_show: "Show the mini player", f_music_artwork: "Artwork style in the player",
@@ -1143,7 +1153,8 @@
         return;
       }
       const master = this._config && this._config.routes && this._config.routes.length;
-      const src = master ? this._config : store.cfg[dashOf()] || {};
+      const cid = idOf(this._config);
+      const src = master ? this._config : (cid ? store.cfg["id:" + cid] : store.cfg[dashOf()]) || {};
       const l = langOf(src, this._hass);
       const icons = (src.routes || []).map((r) => `<span style="color:${colorOf(r.color || r.icon_color, "#26c6da")}">${r.image ? `<img src="${r.image}">` : `<ha-icon icon="${r.icon || "mdi:circle-outline"}"></ha-icon>`}</span>`).join("");
       this.shadowRoot.innerHTML = `<style>
@@ -1159,35 +1170,67 @@
       <div class="r">${icons || `<i style='opacity:.6'>${tr(l, "no_tabs")}</i>`}</div>
       <div class="n">${mode === "edit" ? (master ? tr(l, "edit_master") : tr(l, "edit_common")) : tr(l, "preview_note")}</div></div>`;
     }
+    _subscribe() {
+      if (store.sub || !this._hass || !this._hass.connection) return;
+      store.sub = true;
+      this._hass.connection.subscribeEvents(() => { Object.keys(store.cfg).forEach((k) => (store.cfg[k].ts = 0)); if (store.owner) store.owner._apply(true); }, "lovelace_updated").catch(() => { store.sub = false; });
+    }
     async _resolve(dash) {
+      const id = idOf(this._config);
       if (this._config.routes && this._config.routes.length) {
         store.cfg[dash] = { ...this._config, ts: Date.now() };
+        if (id) { store.cfg["id:" + id] = { ...this._config, ts: Date.now() }; lsSet("holm-navbar:" + id, this._config); }
         return this._config;
       }
+      if (id) return this._resolveId(id, dash);
       const c = store.cfg[dash];
       if (c && Date.now() - c.ts < 60000) return c;
       if (!this._hass) return c || null;
       try {
-        const lc = await this._hass.callWS({ type: "lovelace/config", url_path: dash === "lovelace" ? null : dash });
-        const stack = [lc];
-        let found = null;
-        for (let i = 0; i < 200000 && stack.length && !found; i++) {
-          const n = stack.pop();
-          if (Array.isArray(n)) n.forEach((x) => stack.push(x));
-          else if (n && typeof n === "object") {
-            if (n.type === "custom:holm-navbar-card" && Array.isArray(n.routes) && n.routes.length) found = n;
-            else Object.values(n).forEach((x) => x && typeof x === "object" && stack.push(x));
-          }
-        }
+        const found = findMaster(await lovelaceOf(this._hass, dash));
         if (found) store.cfg[dash] = { ...found, ts: Date.now() };
-        if (!this._sub && this._hass.connection) {
-          this._sub = true;
-          this._hass.connection.subscribeEvents(() => { Object.keys(store.cfg).forEach((k) => (store.cfg[k].ts = 0)); if (store.owner) store.owner._apply(true); }, "lovelace_updated").catch(() => {});
-        }
+        this._subscribe();
         return store.cfg[dash] || null;
       } catch (e) {
         return c || null;
       }
+    }
+    // barre partagée par identifiant (navbar_id), éventuellement définie dans un autre tableau de bord
+    async _resolveId(id, dash) {
+      const key = "id:" + id, c = store.cfg[key];
+      if (c && Date.now() - c.ts < 60000) return c;
+      if (!this._hass) return c || lsGet("holm-navbar:" + id);
+      // affichage immédiat depuis la dernière configuration connue, puis vérification en arrière-plan
+      if (!c) {
+        const cached = lsGet("holm-navbar:" + id);
+        if (cached) { store.cfg[key] = { ...cached, ts: 0 }; this._lookup(id, dash).then((f) => { const { ts, ...ff } = f || {}; if (f && JSON.stringify(ff) !== JSON.stringify(cached)) this._apply(true); }); return store.cfg[key]; }
+      }
+      return (await this._lookup(id, dash)) || c || null;
+    }
+    async _lookup(id, dash) {
+      if (store.looking && store.looking[id]) return store.looking[id];
+      store.looking = store.looking || {};
+      const run = (async () => {
+        const dashes = dashboardsOf(this._hass), order = [dash, ...dashes.filter((d) => d !== dash)];
+        const last = (lsGet("holm-navbar:where") || {})[id];
+        if (last) order.splice(order.indexOf(last) > 0 ? order.indexOf(last) : 0, 0, last);
+        for (const d of [...new Set(order)]) {
+          try {
+            const found = findMaster(await lovelaceOf(this._hass, d), id);
+            if (found) {
+              store.cfg["id:" + id] = { ...found, ts: Date.now() };
+              lsSet("holm-navbar:" + id, found);
+              lsSet("holm-navbar:where", { ...(lsGet("holm-navbar:where") || {}), [id]: d });
+              this._subscribe();
+              return store.cfg["id:" + id];
+            }
+          } catch (e) { /* tableau de bord inaccessible, en YAML ou automatique */ }
+        }
+        this._subscribe();
+        return null;
+      })();
+      store.looking[id] = run;
+      try { return await run; } finally { delete store.looking[id]; }
     }
     async _apply(force) {
       if (!this._config || !this.isConnected || this._isPreview()) return;
@@ -1195,18 +1238,22 @@
       const cfg = await this._resolve(dash);
       if (!cfg || !this.isConnected) return;
       this._applied = true;
-      const full = { ...DEFAULTS, ...cfg, ...(this._config.routes ? {} : pick(this._config, ["labels", "desktop_position", "mobile_style", "auto_hide"])) };
+      const local = this._config.routes ? {} : pick(this._config, idOf(this._config) ? LOCAL_KEYS_ID : LOCAL_KEYS);
+      const { ts, ...base } = cfg;
+      const full = { ...DEFAULTS, ...base, ...local };
       if (!store.bar) {
         store.bar = document.createElement("holm-navbar-bar");
         document.body.appendChild(store.bar);
       }
       store.owner = this;
       const prevKey = store.bar._cfgKey;
-      const key = JSON.stringify(full);
+      // le tableau de bord fait partie de la clé : même configuration sur deux tableaux de bord = deux contextes (#7)
+      const key = dash + "|" + JSON.stringify(full);
       if (force || prevKey !== key) {
         store.bar._cfgKey = key;
         store.bar.setup(full, this._hass, dash);
       } else {
+        store.bar.dash = dash;
         store.bar.hass = this._hass;
         store.bar.render();
         store.bar._checkScope();
@@ -1214,6 +1261,50 @@
     }
   }
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+  // réglages qu'une carte « fille » peut garder pour sa vue ; avec navbar_id, aussi la couleur, l'apparence, la vibration et les lignes
+  const LOCAL_KEYS = ["labels", "desktop_position", "mobile_style", "auto_hide"];
+  const LOCAL_KEYS_ID = [...LOCAL_KEYS, "accent", "theme", "haptic", "label_lines"];
+  const idOf = (c) => (c && (c.navbar_id || "").toString().trim()) || null;
+  const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } };
+  // cherche dans une configuration Lovelace la carte maître (avec onglets), éventuellement d'un identifiant donné
+  const findMaster = (lc, id) => {
+    const stack = [lc];
+    for (let i = 0; i < 200000 && stack.length; i++) {
+      const n = stack.pop();
+      if (Array.isArray(n)) n.forEach((x) => stack.push(x));
+      else if (n && typeof n === "object") {
+        if (n.type === "custom:holm-navbar-card" && Array.isArray(n.routes) && n.routes.length && (!id || idOf(n) === id)) return n;
+        Object.values(n).forEach((x) => x && typeof x === "object" && stack.push(x));
+      }
+    }
+    return null;
+  };
+  // tableaux de bord accessibles à l'utilisateur (aussi pour les comptes non administrateurs)
+  const dashboardsOf = (hass) => {
+    const out = new Set(["lovelace"]);
+    Object.values((hass && hass.panels) || {}).forEach((p) => { if (p && p.component_name === "lovelace" && p.url_path) out.add(p.url_path); });
+    return [...out];
+  };
+  const lovelaceOf = (hass, dash) => hass.callWS({ type: "lovelace/config", url_path: dash === "lovelace" ? null : dash });
+  // toutes les barres maîtres avec identifiant, tous tableaux de bord confondus (pour l'éditeur)
+  const listIds = async (hass) => {
+    const ids = new Map();
+    for (const d of dashboardsOf(hass)) {
+      try {
+        const lc = await lovelaceOf(hass, d), stack = [lc];
+        for (let i = 0; i < 200000 && stack.length; i++) {
+          const n = stack.pop();
+          if (Array.isArray(n)) n.forEach((x) => stack.push(x));
+          else if (n && typeof n === "object") {
+            if (n.type === "custom:holm-navbar-card" && Array.isArray(n.routes) && n.routes.length && idOf(n) && !ids.has(idOf(n))) ids.set(idOf(n), d);
+            Object.values(n).forEach((x) => x && typeof x === "object" && stack.push(x));
+          }
+        }
+      } catch (e) { /* tableau de bord en mode YAML ou automatique */ }
+    }
+    return ids;
+  };
   const getAt = (o, path) => path.reduce((a, k) => (a == null ? a : a[k]), o);
 
   // ------------------------------------------------------------------
@@ -1669,30 +1760,67 @@
       `;
       const c = this._config;
       const langs = [{ value: "auto", label: this.t("o_auto") }, ...Object.entries(LANG_NAMES).map(([value, label]) => ({ value, label }))];
+      if (!c.routes || !c.routes.length) {
+        // carte enfant : seuls les réglages explicitement choisis sont enregistrés, le reste hérite de la maître
+        const keys = idOf(c) ? LOCAL_KEYS_ID : LOCAL_KEYS;
+        const inh = { value: "", label: this.t("o_inherit") };
+        const yn = [inh, { value: "true", label: this.t("o_yes") }, { value: "false", label: this.t("o_no") }];
+        const all = {
+          labels: { select: { mode: "dropdown", options: [inh, { value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } },
+          mobile_style: { select: { mode: "dropdown", options: [inh, { value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } },
+          desktop_position: { select: { mode: "dropdown", options: [inh, { value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } },
+          theme: { select: { mode: "dropdown", options: [inh, { value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } },
+          label_lines: { select: { mode: "dropdown", options: [inh, { value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } },
+          auto_hide: { select: { mode: "dropdown", options: yn } },
+          haptic: { select: { mode: "dropdown", options: yn } },
+          accent: { text: {} },
+        };
+        const oh = document.createElement("div");
+        oh.className = "hn-sec";
+        oh.innerHTML = `<ha-icon icon="mdi:tune-variant"></ha-icon>${this.t("sec_override")}`;
+        const on = document.createElement("div");
+        on.className = "hn-note";
+        on.textContent = this.t("note_override");
+        const sch = keys.map((k) => ({ name: k, selector: all[k] }));
+        const grid = [];
+        for (let k = 0; k < sch.length; k += 3) grid.push({ type: "grid", name: "", schema: sch.slice(k, k + 3) });
+        const data = {};
+        keys.forEach((k) => { if (c[k] != null) data[k] = typeof c[k] === "boolean" || typeof c[k] === "number" ? String(c[k]) : c[k]; else data[k] = ""; });
+        this._childOverrides = [oh, on, this._form(grid, data, (v) => this._update((cc) => {
+          keys.forEach((k) => {
+            const x = v[k] == null ? "" : String(v[k]).trim();
+            if (!x) delete cc[k];
+            else if (k === "auto_hide" || k === "haptic") cc[k] = x === "true";
+            else if (k === "label_lines") cc[k] = parseInt(x, 10);
+            else cc[k] = x;
+          });
+        }))];
+      } else {
       out.appendChild(this._form([
-        { type: "grid", name: "", schema: [
-          { name: "labels", selector: { select: { mode: "dropdown", options: [{ value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } } },
-          { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } } },
-          { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
-        ] },
-        { type: "grid", name: "", schema: [
-          { name: "theme", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } } },
-          { name: "label_lines", selector: { select: { mode: "dropdown", options: [{ value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } } },
-          { name: "language", selector: { select: { mode: "dropdown", options: langs } } },
-        ] },
-        { type: "grid", name: "", schema: [
-          { name: "auto_hide", selector: { boolean: {} } },
-          { name: "haptic", selector: { boolean: {} } },
-          { name: "accent", selector: { text: {} } },
-        ] },
-      ], { ...DEFAULTS, language: "auto", ...c, label_lines: String(linesOf(c)) }, (v) => this._update((cc) => {
-        Object.assign(cc, pick(v, ["theme", "labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
-        const n = parseInt(v.label_lines, 10);
-        if (isNaN(n) || n === 2) delete cc.label_lines; else cc.label_lines = n;
-        const langChanged = (cc.language || "auto") !== (v.language || "auto");
-        if (!v.language || v.language === "auto") delete cc.language; else cc.language = v.language;
-        if (langChanged) setTimeout(() => this._render(), 0);
-      })));
+          { type: "grid", name: "", schema: [
+            { name: "labels", selector: { select: { mode: "dropdown", options: [{ value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } } },
+            { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } } },
+            { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
+          ] },
+          { type: "grid", name: "", schema: [
+            { name: "theme", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } } },
+            { name: "label_lines", selector: { select: { mode: "dropdown", options: [{ value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } } },
+            { name: "language", selector: { select: { mode: "dropdown", options: langs } } },
+          ] },
+          { type: "grid", name: "", schema: [
+            { name: "auto_hide", selector: { boolean: {} } },
+            { name: "haptic", selector: { boolean: {} } },
+            { name: "accent", selector: { text: {} } },
+          ] },
+        ], { ...DEFAULTS, language: "auto", ...c, label_lines: String(linesOf(c)) }, (v) => this._update((cc) => {
+          Object.assign(cc, pick(v, ["theme", "labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
+          const n = parseInt(v.label_lines, 10);
+          if (isNaN(n) || n === 2) delete cc.label_lines; else cc.label_lines = n;
+          const langChanged = (cc.language || "auto") !== (v.language || "auto");
+          if (!v.language || v.language === "auto") delete cc.language; else cc.language = v.language;
+          if (langChanged) setTimeout(() => this._render(), 0);
+        })));
+      }
       if (c.routes && c.routes.length) {
         const mh = document.createElement("div");
         mh.className = "hn-sec";
@@ -1722,11 +1850,31 @@
       if (!c.routes || !c.routes.length) {
         const n = document.createElement("div");
         n.className = "hn-note";
-        n.innerHTML = this.t("note_common");
+        n.innerHTML = this.t("id_child");
         out.appendChild(n);
+        const ids = this._ids ? [...this._ids.keys()] : [];
+        const cur = idOf(c);
+        const opts = [{ value: "", label: this.t("o_this_dash") }, ...ids.map((v) => ({ value: v, label: `${v} · ${this._ids.get(v)}` }))];
+        if (cur && !ids.includes(cur)) opts.push({ value: cur, label: cur });
+        out.appendChild(this._form([{ name: "navbar_ref", selector: { select: { mode: "dropdown", custom_value: true, options: opts } } }],
+          { navbar_ref: cur || "" }, (v) => this._update((cc) => { const id = (v.navbar_ref || "").trim(); if (id) cc.navbar_id = id; else delete cc.navbar_id; }, true)));
+        if (cur && this._ids && !this._ids.has(cur)) {
+          const w = document.createElement("div"); w.className = "hn-note warn"; w.textContent = this.t("id_missing", cur); out.appendChild(w);
+        }
+        if (!this._ids && !this._idsLoading) {
+          this._idsLoading = true;
+          listIds(this._hass).then((m) => { this._ids = m; this._idsLoading = false; this._render(); }).catch(() => { this._idsLoading = false; });
+        }
+        (this._childOverrides || []).forEach((e) => out.appendChild(e));
         this.replaceChildren(out);
         return;
       }
+      const idn = document.createElement("div");
+      idn.className = "hn-note";
+      idn.innerHTML = this.t("id_master");
+      out.appendChild(idn);
+      out.appendChild(this._form([{ name: "navbar_id", selector: { text: {} } }], { navbar_id: idOf(c) || "" },
+        (v) => this._update((cc) => { const id = (v.navbar_id || "").trim(); if (id) cc.navbar_id = id; else delete cc.navbar_id; })));
       const h = document.createElement("div");
       h.className = "hn-sec";
       h.innerHTML = `<ha-icon icon="mdi:dock-bottom"></ha-icon>${this.t("sec_tabs")}`;

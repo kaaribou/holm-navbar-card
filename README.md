@@ -14,6 +14,7 @@ HOLM Navbar Card pose en bas de l'écran (ou sur le côté, sur ordinateur) un *
 
 - 🫧 **Dock en verre animé** : bulle active qui glisse, icônes colorées, rebond et vibration au toucher.
 - 🗂️ **Une seule configuration pour tout le dashboard** : une carte « maître » contient les onglets, les autres vues posent juste la carte, sans rien régler.
+- 🧩 **Plusieurs tableaux de bord** : donnez un identifiant à la barre et reprenez-la dans vos autres tableaux de bord, avec des réglages propres à chacun.
 - 🚀 **Pas de clignotement** : la barre reste posée sur la page quand on change de vue.
 - 📂 **Sous-menus** à l'appui long : un panneau de tuiles pour aller vers d'autres vues ou **lancer une action** (script, scène, basculer une lumière…), avec **l'état en direct** de l'entité (Garage · Ouvert, Alarme · Armée…).
 - 🪆 **Sous-menus imbriqués** : une tuile peut ouvrir son propre sous-menu (appui long), avec bouton retour et fil d'Ariane.
@@ -31,7 +32,15 @@ HOLM Navbar Card pose en bas de l'écran (ou sur le côté, sur ordinateur) un *
 |---|---|
 | ![Sous-menu](docs/images/sous-menu.png) | ![Lecteurs en cours](docs/images/lecteurs-en-cours.png) |
 
-### 🆕 Nouveautés de la 1.6.0
+### 🆕 Nouveautés de la 1.7.0
+
+#### 🧩 Une même barre pour plusieurs tableaux de bord
+Donnez un **identifiant** à votre carte maître (ex. `principale`), puis posez une carte HOLM Navbar dans un autre tableau de bord et choisissez cette barre dans la liste : les onglets viennent de la carte maître, où qu'elle soit. Chaque tableau de bord peut garder **ses propres réglages** (couleur, apparence, libellés, position…). Voir [Plusieurs tableaux de bord](#plusieurs-tableaux-de-bord).
+
+#### 🐛 La barre ne disparaît plus en passant d'un tableau de bord à l'autre
+Avec la même carte maître copiée dans deux tableaux de bord, la barre pouvait disparaître après la navigation ; c'est corrigé (#7).
+
+### Nouveautés de la 1.6.0
 
 #### 🃏 Des cartes Lovelace dans les sous-menus
 
@@ -70,6 +79,7 @@ Carte et éditeur traduits en **français, anglais, allemand, espagnol, italien,
 - [Prérequis](#prérequis)
 - [Installation](#installation)
 - [Mise en place en 2 minutes](#mise-en-place-en-2-minutes)
+- [Plusieurs tableaux de bord](#plusieurs-tableaux-de-bord)
 - [Les onglets](#les-onglets)
 - [Sous-menus](#sous-menus)
 - [Cartes dans le panneau](#cartes-dans-le-panneau)
@@ -128,7 +138,40 @@ type: custom:holm-navbar-card
 
 En mode édition, la carte s'affiche comme un petit aperçu (« carte maître » ou « config commune ») ; en utilisation normale elle est invisible et **la barre apparaît en bas de l'écran**. Toute modification de la carte maître est appliquée partout, instantanément.
 
-> 💡 Une vue « secondaire » peut tout de même changer localement `labels`, `desktop_position`, `mobile_style` ou `auto_hide`.
+> 💡 Une vue « secondaire » peut tout de même changer localement `labels`, `desktop_position`, `mobile_style` ou `auto_hide` (section *Réglages propres à cette vue* de l'éditeur ; « Comme la carte maître » = hérité).
+
+---
+
+## Plusieurs tableaux de bord
+
+Par défaut, une carte sans onglets reprend la carte maître **de son tableau de bord**. Pour réutiliser la même barre dans **d'autres tableaux de bord** :
+
+1. Sur la carte maître, renseignez **Identifiant de la barre** (ex. `principale`).
+2. Dans l'autre tableau de bord, ajoutez une carte **HOLM Navbar** et choisissez `principale` dans **Barre à reprendre**.
+
+```yaml
+# carte maître (tableau de bord « Accueil »)
+type: custom:holm-navbar-card
+navbar_id: principale
+routes:
+  - label: Accueil
+    icon: mdi:home
+    url: /lovelace/accueil
+  - label: Énergie
+    icon: mdi:flash
+    url: /dashboard-energie/0
+
+# dans n'importe quel autre tableau de bord
+type: custom:holm-navbar-card
+navbar_id: principale
+accent: "#ff7043"   # facultatif : réglages propres à ce tableau de bord
+```
+
+- Les onglets se modifient **uniquement sur la carte maître** ; toute modification est reprise partout.
+- Une carte qui reprend une barre par identifiant peut garder ses propres `accent`, `theme`, `labels`, `label_lines`, `desktop_position`, `mobile_style`, `auto_hide` et `haptic`. Tout réglage laissé sur « Comme la carte maître » est hérité.
+- Utilisez des **adresses complètes** dans les onglets (`/lovelace/accueil`, `/dashboard-energie/0`) pour que chaque onglet ouvre le bon tableau de bord, d'où qu'on le touche.
+- La barre est mémorisée sur l'appareil : elle s'affiche immédiatement, puis se met à jour si la carte maître a changé.
+- Les tableaux de bord en mode YAML (fichier) ne sont pas lus : placez la carte maître dans un tableau de bord géré depuis l'interface.
 
 ---
 
@@ -255,6 +298,7 @@ Dans la section **Mini lecteur de musique** de la carte maître :
 
 | Option | Valeurs | Par défaut |
 |---|---|---|
+| `navbar_id` | identifiant de la barre : sur la carte maître, pour la partager ; sur une autre carte, pour reprendre cette barre | — |
 | `theme` | Apparence : `auto` (suit le mode clair / sombre), `dark`, `light`, `theme` (couleurs de votre thème) | `auto` |
 | `labels` | `active` (onglet actif), `all`, `none` | `active` |
 | `mobile_style` | `docked` (collée en bas), `floating` | `docked` |
@@ -342,7 +386,8 @@ routes:
 
 | Problème | Solution |
 |---|---|
-| La barre n'apparaît pas sur une vue | Ajoutez la carte `custom:holm-navbar-card` dans cette vue (sans réglage). La carte maître doit être dans **le même dashboard**. |
+| La barre n'apparaît pas sur une vue | Ajoutez la carte `custom:holm-navbar-card` dans cette vue (sans réglage). La carte maître doit être dans **le même dashboard**, ou utilisez un [identifiant de barre](#plusieurs-tableaux-de-bord). |
+| « Aucune barre avec l'identifiant… » | Vérifiez l'identifiant sur la carte maître (majuscules comprises) et que son tableau de bord est géré depuis l'interface. |
 | La barre cache le bas de la page | La carte ajoute automatiquement une marge en bas de la vue ; rechargez la page si besoin. |
 | Pas de note de musique / panneau vide avec un message | Installez **HOLM Music Card** et **Music Assistant**, puis rechargez la page (Ctrl + F5). |
 | Un lecteur n'est pas pris en compte | Seuls les lecteurs de l'intégration **Music Assistant** sont surveillés ; vérifiez la liste *Lecteurs surveillés*. |
