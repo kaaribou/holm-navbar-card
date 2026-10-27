@@ -1,7 +1,8 @@
 # Changelog
 
 ## 1.7.0
-- **Une même barre pour plusieurs tableaux de bord** (#7) : nouvel identifiant `navbar_id` sur la carte maître ; dans un autre tableau de bord, une carte HOLM Navbar avec le même identifiant reprend ses onglets. Choix de la barre dans une liste dans l'éditeur.
+- **Une même barre pour plusieurs tableaux de bord** (#7) : nouvel identifiant `navbar_id` sur la carte maître ; dans un autre tableau de bord, une carte HOLM Navbar avec le même identifiant reprend ses onglets. Nouveau champ *Rôle de cette carte* en haut de l'éditeur : barre maître, reprendre la barre de ce tableau de bord, ou reprendre une barre partagée.
+- **Nouvelle carte** : elle reprend automatiquement la barre existante (celle du tableau de bord, sinon une barre partagée) au lieu de créer une deuxième carte maître avec des onglets d'exemple.
 - **Réglages propres à chaque vue** : une carte qui reprend une barre ne garde que les réglages choisis (couleur, apparence, libellés, lignes, position, masquage, vibration) ; « Comme la carte maître » hérite du reste.
 - **Correctif** (#7) : la barre ne disparaît plus en naviguant entre deux tableaux de bord qui contiennent la même carte maître.
 - La barre partagée est mémorisée sur l'appareil pour s'afficher immédiatement, puis mise à jour si la carte maître change.

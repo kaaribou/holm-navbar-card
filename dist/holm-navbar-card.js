@@ -30,9 +30,9 @@
       back: "Retour", preview_title: "Barre de navigation HOLM", master: "carte maître", common: "config commune", no_tabs: "aucun onglet",
       edit_master: "Clique sur cette carte (crayon) pour modifier les onglets de toutes les vues.",
       edit_common: "Cette vue réutilise la barre définie sur la carte maître (celle qui contient les onglets).",
-      f_navbar_id: "Identifiant de la barre", f_navbar_ref: "Barre à reprendre", f_override: "Réglages propres à cette vue",
-      o_this_dash: "Carte maître de ce tableau de bord", id_master: "Donnez un identifiant (ex. <b>principale</b>) pour réutiliser cette barre dans <b>d'autres tableaux de bord</b> : il suffira d'y poser une carte HOLM Navbar qui reprend cet identifiant.",
-      id_child: "Choisissez la barre à reprendre : celle de ce tableau de bord, ou une barre d'un <b>autre tableau de bord</b> par son identifiant. Les onglets se modifient sur sa carte maître.",
+      f_navbar_id: "Identifiant de la barre", f_navbar_ref: "Barre à reprendre", f_navbar_mode: "Rôle de cette carte", o_master: "Barre maître : les onglets sont définis ici", o_reuse: (id, d) => `Reprendre la barre « ${id} » (tableau ${d})`, id_dup: (id, d) => `L'identifiant « ${id} » est déjà celui de la barre du tableau de bord « ${d} ». Pour reprendre cette barre ici, choisissez-la dans « Rôle de cette carte » plutôt que de recréer des onglets.`, note_mode: "Une seule carte maître suffit : dans les autres vues et tableaux de bord, choisissez « Reprendre… ».", f_override: "Réglages propres à cette vue",
+      o_this_dash: "Reprendre la barre de ce tableau de bord", id_master: "Donnez un identifiant (ex. <b>principale</b>) pour réutiliser cette barre dans <b>d'autres tableaux de bord</b> : il suffira d'y poser une carte HOLM Navbar qui reprend cet identifiant.",
+      id_child: "Cette carte reprend une barre existante : ses onglets se modifient sur la <b>carte maître</b>.",
       sec_override: "Réglages propres à cette vue (facultatif)", note_override: "Laissez « Comme la carte maître » pour hériter du réglage.", o_inherit: "Comme la carte maître", o_yes: "Oui", o_no: "Non",
       id_missing: (id) => `Aucune barre avec l'identifiant « ${id} » trouvée pour l'instant.`,
       preview_note: "La barre s'affiche en bas de l'écran.",
@@ -69,9 +69,9 @@
       back: "Back", preview_title: "HOLM navigation bar", master: "main card", common: "shared config", no_tabs: "no tabs",
       edit_master: "Click this card (pencil) to edit the tabs of every view.",
       edit_common: "This view reuses the bar defined on the main card (the one holding the tabs).",
-      f_navbar_id: "Bar ID", f_navbar_ref: "Bar to reuse", f_override: "Settings for this view",
-      o_this_dash: "Main card of this dashboard", id_master: "Give an ID (e.g. <b>main</b>) to reuse this bar in <b>other dashboards</b>: just add a HOLM Navbar card there that refers to this ID.",
-      id_child: "Choose the bar to reuse: the one of this dashboard, or a bar from <b>another dashboard</b> by its ID. Tabs are edited on its main card.",
+      f_navbar_id: "Bar ID", f_navbar_ref: "Bar to reuse", f_navbar_mode: "Role of this card", o_master: "Main bar: tabs are defined here", o_reuse: (id, d) => `Reuse the bar “${id}” (dashboard ${d})`, id_dup: (id, d) => `The ID “${id}” already belongs to the bar of dashboard “${d}”. To reuse that bar here, pick it in “Role of this card” instead of creating tabs again.`, note_mode: "One main card is enough: in other views and dashboards, choose “Reuse…”.", f_override: "Settings for this view",
+      o_this_dash: "Reuse the bar of this dashboard", id_master: "Give an ID (e.g. <b>main</b>) to reuse this bar in <b>other dashboards</b>: just add a HOLM Navbar card there that refers to this ID.",
+      id_child: "This card reuses an existing bar: its tabs are edited on the <b>main card</b>.",
       sec_override: "Settings for this view (optional)", note_override: "Leave “Same as main card” to inherit the setting.", o_inherit: "Same as main card", o_yes: "Yes", o_no: "No",
       id_missing: (id) => `No bar with the ID “${id}” found yet.`,
       preview_note: "The bar is shown at the bottom of the screen.",
@@ -1077,15 +1077,29 @@
     static getConfigElement() {
       return document.createElement("holm-navbar-card-editor");
     }
-    static getStubConfig(hass) {
+    static getStubRoutes(hass) {
       const l = langOf(null, hass);
-      return {
-        type: "custom:holm-navbar-card",
-        routes: [
-          { label: tr(l, "home"), icon: "mdi:home", url: "/lovelace/0", color: "#26c6da" },
-          { label: tr(l, "lights"), icon: "mdi:lightbulb-group", url: "/lovelace/1", color: "#ffca28" },
-        ],
-      };
+      return [
+        { label: tr(l, "home"), icon: "mdi:home", url: "/lovelace/0", color: "#26c6da" },
+        { label: tr(l, "lights"), icon: "mdi:lightbulb-group", url: "/lovelace/1", color: "#ffca28" },
+      ];
+    }
+    // nouvelle carte : reprend la barre existante (de ce tableau de bord, sinon une barre partagée) au lieu de créer une maître de plus
+    static async getStubConfig(hass) {
+      const base = { type: "custom:holm-navbar-card" };
+      try {
+        if (hass && hass.callWS) {
+          const timeout = new Promise((r) => setTimeout(() => r("timeout"), 2500));
+          const res = await Promise.race([(async () => {
+            try { if (findMaster(await lovelaceOf(hass, dashOf()))) return base; } catch (e) { /* tableau de bord illisible */ }
+            const ids = await listIds(hass);
+            if (ids.size) return { ...base, navbar_id: [...ids.keys()][0] };
+            return null;
+          })(), timeout]);
+          if (res && res !== "timeout") return res;
+        }
+      } catch (e) { /* configuration par défaut */ }
+      return { ...base, routes: HolmNavbarCard.getStubRoutes(hass) };
     }
     setConfig(config) {
       this._config = { ...config };
@@ -1759,6 +1773,32 @@
         .hn-link{background:none;border:none;color:var(--primary-color,#26c6da);cursor:pointer;font:600 12px inherit;padding:4px 0}
       `;
       const c = this._config;
+      if (!this._ids && !this._idsLoading) {
+        this._idsLoading = true;
+        listIds(this._hass).then((m) => { this._ids = m; this._idsLoading = false; this._render(); }).catch(() => { this._idsLoading = false; });
+      }
+      {
+        const isMaster = !!(c.routes && c.routes.length), cur = idOf(c), here = dashOf();
+        const ids = this._ids ? [...this._ids.entries()].filter(([v, d]) => !(isMaster && v === cur && d === here)) : [];
+        const opts = [{ value: "__master", label: this.t("o_master") }, { value: "", label: this.t("o_this_dash") }, ...ids.map(([v, d]) => ({ value: v, label: this.t("o_reuse", v, d) }))];
+        if (!isMaster && cur && !ids.some(([v]) => v === cur)) opts.push({ value: cur, label: cur });
+        out.appendChild(this._form([{ name: "navbar_mode", selector: { select: { mode: "dropdown", options: opts } } }],
+          { navbar_mode: isMaster ? "__master" : cur || "" }, (v) => {
+            const m = v.navbar_mode == null ? "" : String(v.navbar_mode);
+            if (m === "__master" && isMaster) return;
+            this._update((cc) => {
+              if (m === "__master") {
+                cc.routes = (this._stash && this._stash.length) ? this._stash : HolmNavbarCard.getStubRoutes(this._hass);
+                delete cc.navbar_id;
+              } else {
+                if (cc.routes && cc.routes.length) this._stash = cc.routes;
+                delete cc.routes;
+                if (m) cc.navbar_id = m; else delete cc.navbar_id;
+              }
+            }, true);
+          }));
+        const mn = document.createElement("div"); mn.className = "hn-note"; mn.textContent = this.t("note_mode"); out.appendChild(mn);
+      }
       const langs = [{ value: "auto", label: this.t("o_auto") }, ...Object.entries(LANG_NAMES).map(([value, label]) => ({ value, label }))];
       if (!c.routes || !c.routes.length) {
         // carte enfant : seuls les réglages explicitement choisis sont enregistrés, le reste hérite de la maître
@@ -1852,18 +1892,9 @@
         n.className = "hn-note";
         n.innerHTML = this.t("id_child");
         out.appendChild(n);
-        const ids = this._ids ? [...this._ids.keys()] : [];
         const cur = idOf(c);
-        const opts = [{ value: "", label: this.t("o_this_dash") }, ...ids.map((v) => ({ value: v, label: `${v} · ${this._ids.get(v)}` }))];
-        if (cur && !ids.includes(cur)) opts.push({ value: cur, label: cur });
-        out.appendChild(this._form([{ name: "navbar_ref", selector: { select: { mode: "dropdown", custom_value: true, options: opts } } }],
-          { navbar_ref: cur || "" }, (v) => this._update((cc) => { const id = (v.navbar_ref || "").trim(); if (id) cc.navbar_id = id; else delete cc.navbar_id; }, true)));
         if (cur && this._ids && !this._ids.has(cur)) {
           const w = document.createElement("div"); w.className = "hn-note warn"; w.textContent = this.t("id_missing", cur); out.appendChild(w);
-        }
-        if (!this._ids && !this._idsLoading) {
-          this._idsLoading = true;
-          listIds(this._hass).then((m) => { this._ids = m; this._idsLoading = false; this._render(); }).catch(() => { this._idsLoading = false; });
         }
         (this._childOverrides || []).forEach((e) => out.appendChild(e));
         this.replaceChildren(out);
@@ -1875,6 +1906,8 @@
       out.appendChild(idn);
       out.appendChild(this._form([{ name: "navbar_id", selector: { text: {} } }], { navbar_id: idOf(c) || "" },
         (v) => this._update((cc) => { const id = (v.navbar_id || "").trim(); if (id) cc.navbar_id = id; else delete cc.navbar_id; })));
+      { const id = idOf(c), d = id && this._ids && this._ids.get(id);
+        if (d && d !== dashOf()) { const w = document.createElement("div"); w.className = "hn-note warn"; w.textContent = this.t("id_dup", id, d); out.appendChild(w); } }
       const h = document.createElement("div");
       h.className = "hn-sec";
       h.innerHTML = `<ha-icon icon="mdi:dock-bottom"></ha-icon>${this.t("sec_tabs")}`;

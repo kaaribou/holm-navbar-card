@@ -147,7 +147,9 @@ En mode édition, la carte s'affiche comme un petit aperçu (« carte maître »
 Par défaut, une carte sans onglets reprend la carte maître **de son tableau de bord**. Pour réutiliser la même barre dans **d'autres tableaux de bord** :
 
 1. Sur la carte maître, renseignez **Identifiant de la barre** (ex. `principale`).
-2. Dans l'autre tableau de bord, ajoutez une carte **HOLM Navbar** et choisissez `principale` dans **Barre à reprendre**.
+2. Dans l'autre tableau de bord, ajoutez une carte **HOLM Navbar** : si ce tableau de bord n'a pas encore de barre, elle reprend automatiquement la barre partagée. Sinon, choisissez **Reprendre la barre « principale »** dans **Rôle de cette carte**.
+
+> 💡 **Rôle de cette carte**, en haut de l'éditeur, permet à tout moment de passer une carte de « Barre maître » (onglets définis ici) à « Reprendre… » (onglets venant d'une autre carte), et inversement.
 
 ```yaml
 # carte maître (tableau de bord « Accueil »)
