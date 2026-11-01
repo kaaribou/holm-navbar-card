@@ -4,6 +4,8 @@
 ![Version](https://img.shields.io/github/v/release/kaaribou/holm-navbar-card)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-03a9f4)
 
+🇫🇷 Français · [🇬🇧 English](README.en.md)
+
 **Une barre de navigation en verre dépoli pour tout votre tableau de bord Home Assistant : animée, vivante, et réglée entièrement à la souris.**
 
 HOLM Navbar Card pose en bas de l'écran (ou sur le côté, sur ordinateur) un **dock flottant façon « verre liquide »** qui relie toutes les vues de votre dashboard. Une bulle lumineuse glisse d'un onglet à l'autre, les icônes rebondissent au toucher, des **pastilles** comptent ce qui est allumé ou ouvert, un **appui long** ouvre un panneau de raccourcis… et si de la musique joue dans la maison, **une petite note de musique** vous le dit.
@@ -32,7 +34,12 @@ HOLM Navbar Card pose en bas de l'écran (ou sur le côté, sur ordinateur) un *
 |---|---|
 | ![Sous-menu](docs/images/sous-menu.png) | ![Lecteurs en cours](docs/images/lecteurs-en-cours.png) |
 
-### 🆕 Nouveautés de la 1.7.0
+### 🆕 Nouveautés de la 1.7.1
+
+- 🌍 **Traductions complétées** : les réglages de la 1.7.0 (identifiant de la barre, rôle de la carte, réglages propres à une vue…) sont maintenant traduits en allemand, espagnol, italien, néerlandais, portugais et polonais.
+- 🇬🇧 README en anglais (`README.en.md`).
+
+### Nouveautés de la 1.7.0
 
 #### 🧩 Une même barre pour plusieurs tableaux de bord
 Donnez un **identifiant** à votre carte maître (ex. `principale`), puis posez une carte HOLM Navbar dans un autre tableau de bord et choisissez cette barre dans la liste : les onglets viennent de la carte maître, où qu'elle soit. Chaque tableau de bord peut garder **ses propres réglages** (couleur, apparence, libellés, position…). Voir [Plusieurs tableaux de bord](#plusieurs-tableaux-de-bord).

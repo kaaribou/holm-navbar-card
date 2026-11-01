@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1
+- **Traductions complétées** : les nouveaux réglages de la 1.7.0 (identifiant de la barre, barre à reprendre, rôle de cette carte, réglages propres à cette vue, messages d'aide) sont traduits en allemand, espagnol, italien, néerlandais, portugais et polonais (ils s'affichaient en anglais).
+- README en anglais (`README.en.md`).
+
 ## 1.7.0
 - **Une même barre pour plusieurs tableaux de bord** (#7) : nouvel identifiant `navbar_id` sur la carte maître ; dans un autre tableau de bord, une carte HOLM Navbar avec le même identifiant reprend ses onglets. Nouveau champ *Rôle de cette carte* en haut de l'éditeur : barre maître, reprendre la barre de ce tableau de bord, ou reprendre une barre partagée.
 - **Nouvelle carte** : elle reprend automatiquement la barre existante (celle du tableau de bord, sinon une barre partagée) au lieu de créer une deuxième carte maître avec des onglets d'exemple.

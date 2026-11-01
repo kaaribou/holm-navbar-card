@@ -12,7 +12,7 @@
  * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.7.0";
+  const VERSION = "1.7.1";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
   const DEFAULTS = { theme: "auto", labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
   const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
@@ -101,6 +101,13 @@
       loading: "Loading the card editor…",
     },
     de: {
+      f_navbar_id: "Kennung der Leiste", f_navbar_ref: "Zu übernehmende Leiste", f_navbar_mode: "Rolle dieser Karte", o_master: "Hauptleiste: die Reiter werden hier festgelegt",
+      o_reuse: (id, d) => `Leiste „${id}“ übernehmen (Dashboard ${d})`, id_dup: (id, d) => `Die Kennung „${id}“ gehört bereits zur Leiste des Dashboards „${d}“. Um diese Leiste hier zu übernehmen, wählen Sie sie unter „Rolle dieser Karte“, statt die Reiter neu anzulegen.`,
+      note_mode: "Eine Hauptkarte genügt: Wählen Sie in den anderen Ansichten und Dashboards „Übernehmen…“.", f_override: "Einstellungen dieser Ansicht", o_this_dash: "Leiste dieses Dashboards übernehmen",
+      id_master: "Geben Sie eine Kennung an (z. B. <b>haupt</b>), um diese Leiste in <b>anderen Dashboards</b> zu verwenden: Dort genügt eine HOLM-Navbar-Karte mit dieser Kennung.",
+      id_child: "Diese Karte übernimmt eine bestehende Leiste: Ihre Reiter werden auf der <b>Hauptkarte</b> bearbeitet.", sec_override: "Einstellungen dieser Ansicht (optional)",
+      note_override: "Lassen Sie „Wie die Hauptkarte“, um die Einstellung zu übernehmen.", o_inherit: "Wie die Hauptkarte", o_yes: "Ja", o_no: "Nein",
+      id_missing: (id) => `Noch keine Leiste mit der Kennung „${id}“ gefunden.`,
       f_panel_width: "Panelbreite", f_cards_columns: "Karten pro Zeile", f_span: "Kartenbreite", o_pw_auto: "Automatisch", o_pw_narrow: "Schmal", o_pw_normal: "Normal", o_pw_large: "Breit", o_pw_xlarge: "Sehr breit", o_pw_full: "Volle Bildschirmbreite", o_cols: (n) => `${n} pro Zeile`, o_span: (n) => `${n} Spalte${n > 1 ? "n" : ""}`, o_span_full: "Ganze Zeile", size_hint: "Größe: Panelbreite, Anzahl der Karten pro Zeile und Breite jeder Karte.",
       playing: "Läuft gerade", no_playing: "Keine Wiedergabe",
       need_music: "Die Karte <b>HOLM Music Card</b> wird benötigt, um die Player hier anzuzeigen. Installiere sie über HACS (kaaribou/holm-music-card).",
@@ -135,6 +142,13 @@
       loading: "Karteneditor wird geladen…",
     },
     es: {
+      f_navbar_id: "Identificador de la barra", f_navbar_ref: "Barra que reutilizar", f_navbar_mode: "Función de esta tarjeta", o_master: "Barra principal: las pestañas se definen aquí",
+      o_reuse: (id, d) => `Reutilizar la barra «${id}» (panel ${d})`, id_dup: (id, d) => `El identificador «${id}» ya es el de la barra del panel «${d}». Para reutilizar esa barra aquí, elígela en «Función de esta tarjeta» en lugar de volver a crear pestañas.`,
+      note_mode: "Basta con una tarjeta principal: en las demás vistas y paneles, elige «Reutilizar…».", f_override: "Ajustes propios de esta vista", o_this_dash: "Reutilizar la barra de este panel",
+      id_master: "Indica un identificador (p. ej. <b>principal</b>) para reutilizar esta barra en <b>otros paneles</b>: bastará con añadir allí una tarjeta HOLM Navbar con este identificador.",
+      id_child: "Esta tarjeta reutiliza una barra existente: sus pestañas se editan en la <b>tarjeta principal</b>.", sec_override: "Ajustes propios de esta vista (opcional)",
+      note_override: "Deja «Como la tarjeta principal» para heredar el ajuste.", o_inherit: "Como la tarjeta principal", o_yes: "Sí", o_no: "No",
+      id_missing: (id) => `Todavía no se ha encontrado ninguna barra con el identificador «${id}».`,
       f_panel_width: "Ancho del panel", f_cards_columns: "Tarjetas por fila", f_span: "Ancho de la tarjeta", o_pw_auto: "Automático", o_pw_narrow: "Estrecho", o_pw_normal: "Normal", o_pw_large: "Ancho", o_pw_xlarge: "Muy ancho", o_pw_full: "Todo el ancho de la pantalla", o_cols: (n) => `${n} por fila`, o_span: (n) => `${n} columna${n > 1 ? "s" : ""}`, o_span_full: "Toda la fila", size_hint: "Tamaño: ancho del panel, número de tarjetas por fila y ancho de cada tarjeta.",
       playing: "Reproduciendo ahora", no_playing: "Nada en reproducción",
       need_music: "Se necesita la tarjeta <b>HOLM Music Card</b> para mostrar los reproductores aquí. Instálala desde HACS (kaaribou/holm-music-card).",
@@ -169,6 +183,13 @@
       loading: "Cargando el editor de tarjetas…",
     },
     it: {
+      f_navbar_id: "Identificativo della barra", f_navbar_ref: "Barra da riutilizzare", f_navbar_mode: "Ruolo di questa scheda", o_master: "Barra principale: le schede sono definite qui",
+      o_reuse: (id, d) => `Riutilizza la barra «${id}» (dashboard ${d})`, id_dup: (id, d) => `L'identificativo «${id}» appartiene già alla barra della dashboard «${d}». Per riutilizzare quella barra qui, sceglila in «Ruolo di questa scheda» invece di ricreare le schede.`,
+      note_mode: "Basta una scheda principale: nelle altre viste e dashboard scegli «Riutilizza…».", f_override: "Impostazioni di questa vista", o_this_dash: "Riutilizza la barra di questa dashboard",
+      id_master: "Indica un identificativo (es. <b>principale</b>) per riutilizzare questa barra in <b>altre dashboard</b>: basterà aggiungervi una scheda HOLM Navbar con questo identificativo.",
+      id_child: "Questa scheda riutilizza una barra esistente: le sue schede si modificano sulla <b>scheda principale</b>.", sec_override: "Impostazioni di questa vista (facoltative)",
+      note_override: "Lascia «Come la scheda principale» per ereditare l'impostazione.", o_inherit: "Come la scheda principale", o_yes: "Sì", o_no: "No",
+      id_missing: (id) => `Nessuna barra con l'identificativo «${id}» trovata per ora.`,
       f_panel_width: "Larghezza del pannello", f_cards_columns: "Schede per riga", f_span: "Larghezza della scheda", o_pw_auto: "Automatica", o_pw_narrow: "Stretto", o_pw_normal: "Normale", o_pw_large: "Largo", o_pw_xlarge: "Molto largo", o_pw_full: "Tutta la larghezza dello schermo", o_cols: (n) => `${n} per riga`, o_span: (n) => `${n} colonn${n > 1 ? "e" : "a"}`, o_span_full: "Tutta la riga", size_hint: "Dimensioni: larghezza del pannello, numero di schede per riga e larghezza di ogni scheda.",
       playing: "In riproduzione", no_playing: "Nessuna riproduzione",
       need_music: "Serve la scheda <b>HOLM Music Card</b> per mostrare qui i lettori. Installala da HACS (kaaribou/holm-music-card).",
@@ -203,6 +224,13 @@
       loading: "Caricamento dell'editor delle schede…",
     },
     nl: {
+      f_navbar_id: "ID van de balk", f_navbar_ref: "Over te nemen balk", f_navbar_mode: "Rol van deze kaart", o_master: "Hoofdbalk: de tabbladen worden hier ingesteld",
+      o_reuse: (id, d) => `Balk ‘${id}’ overnemen (dashboard ${d})`, id_dup: (id, d) => `De ID ‘${id}’ hoort al bij de balk van dashboard ‘${d}’. Kies die balk bij ‘Rol van deze kaart’ om hem hier over te nemen, in plaats van opnieuw tabbladen te maken.`,
+      note_mode: "Eén hoofdkaart is genoeg: kies in de andere weergaven en dashboards ‘Overnemen…’.", f_override: "Instellingen van deze weergave", o_this_dash: "De balk van dit dashboard overnemen",
+      id_master: "Geef een ID op (bv. <b>hoofd</b>) om deze balk in <b>andere dashboards</b> te gebruiken: zet daar gewoon een HOLM Navbar-kaart met deze ID.",
+      id_child: "Deze kaart neemt een bestaande balk over: de tabbladen bewerk je op de <b>hoofdkaart</b>.", sec_override: "Instellingen van deze weergave (optioneel)",
+      note_override: "Laat ‘Zoals de hoofdkaart’ staan om de instelling over te nemen.", o_inherit: "Zoals de hoofdkaart", o_yes: "Ja", o_no: "Nee",
+      id_missing: (id) => `Nog geen balk met de ID ‘${id}’ gevonden.`,
       f_panel_width: "Breedte van het paneel", f_cards_columns: "Kaarten per rij", f_span: "Breedte van de kaart", o_pw_auto: "Automatisch", o_pw_narrow: "Smal", o_pw_normal: "Normaal", o_pw_large: "Breed", o_pw_xlarge: "Extra breed", o_pw_full: "Volledige schermbreedte", o_cols: (n) => `${n} per rij`, o_span: (n) => `${n} kolom${n > 1 ? "men" : ""}`, o_span_full: "Hele rij", size_hint: "Grootte: breedte van het paneel, aantal kaarten per rij en breedte van elke kaart.",
       playing: "Nu aan het spelen", no_playing: "Er speelt niets",
       need_music: "De kaart <b>HOLM Music Card</b> is nodig om hier spelers te tonen. Installeer hem via HACS (kaaribou/holm-music-card).",
@@ -237,6 +265,13 @@
       loading: "Kaarteditor laden…",
     },
     pt: {
+      f_navbar_id: "Identificador da barra", f_navbar_ref: "Barra a reutilizar", f_navbar_mode: "Função deste cartão", o_master: "Barra principal: os separadores são definidos aqui",
+      o_reuse: (id, d) => `Reutilizar a barra «${id}» (painel ${d})`, id_dup: (id, d) => `O identificador «${id}» já é o da barra do painel «${d}». Para reutilizar essa barra aqui, escolha-a em «Função deste cartão» em vez de voltar a criar separadores.`,
+      note_mode: "Basta um cartão principal: nas outras vistas e painéis, escolha «Reutilizar…».", f_override: "Definições desta vista", o_this_dash: "Reutilizar a barra deste painel",
+      id_master: "Indique um identificador (ex. <b>principal</b>) para reutilizar esta barra noutros <b>painéis</b>: bastará colocar lá um cartão HOLM Navbar com este identificador.",
+      id_child: "Este cartão reutiliza uma barra existente: os separadores editam-se no <b>cartão principal</b>.", sec_override: "Definições desta vista (opcional)",
+      note_override: "Deixe «Como o cartão principal» para herdar a definição.", o_inherit: "Como o cartão principal", o_yes: "Sim", o_no: "Não",
+      id_missing: (id) => `Ainda não foi encontrada nenhuma barra com o identificador «${id}».`,
       f_panel_width: "Largura do painel", f_cards_columns: "Cartões por linha", f_span: "Largura do cartão", o_pw_auto: "Automática", o_pw_narrow: "Estreito", o_pw_normal: "Normal", o_pw_large: "Largo", o_pw_xlarge: "Muito largo", o_pw_full: "Toda a largura do ecrã", o_cols: (n) => `${n} por linha`, o_span: (n) => `${n} coluna${n > 1 ? "s" : ""}`, o_span_full: "Linha inteira", size_hint: "Tamanho: largura do painel, número de cartões por linha e largura de cada cartão.",
       playing: "A tocar agora", no_playing: "Nada a tocar",
       need_music: "É necessário o cartão <b>HOLM Music Card</b> para mostrar aqui os leitores. Instala-o a partir do HACS (kaaribou/holm-music-card).",
@@ -271,6 +306,13 @@
       loading: "A carregar o editor de cartões…",
     },
     pl: {
+      f_navbar_id: "Identyfikator paska", f_navbar_ref: "Pasek do przejęcia", f_navbar_mode: "Rola tej karty", o_master: "Pasek główny: karty są definiowane tutaj",
+      o_reuse: (id, d) => `Przejmij pasek „${id}” (panel ${d})`, id_dup: (id, d) => `Identyfikator „${id}” należy już do paska panelu „${d}”. Aby przejąć ten pasek tutaj, wybierz go w „Rola tej karty” zamiast tworzyć karty od nowa.`,
+      note_mode: "Wystarczy jedna karta główna: w pozostałych widokach i panelach wybierz „Przejmij…”.", f_override: "Ustawienia tego widoku", o_this_dash: "Przejmij pasek tego panelu",
+      id_master: "Podaj identyfikator (np. <b>glowny</b>), aby używać tego paska w <b>innych panelach</b>: wystarczy dodać tam kartę HOLM Navbar z tym identyfikatorem.",
+      id_child: "Ta karta przejmuje istniejący pasek: jego karty edytuje się na <b>karcie głównej</b>.", sec_override: "Ustawienia tego widoku (opcjonalne)",
+      note_override: "Zostaw „Jak karta główna”, aby odziedziczyć ustawienie.", o_inherit: "Jak karta główna", o_yes: "Tak", o_no: "Nie",
+      id_missing: (id) => `Nie znaleziono jeszcze paska z identyfikatorem „${id}”.`,
       f_panel_width: "Szerokość panelu", f_cards_columns: "Kart w wierszu", f_span: "Szerokość karty", o_pw_auto: "Automatycznie", o_pw_narrow: "Wąski", o_pw_normal: "Normalny", o_pw_large: "Szeroki", o_pw_xlarge: "Bardzo szeroki", o_pw_full: "Cała szerokość ekranu", o_cols: (n) => `${n} w wierszu`, o_span: (n) => `kolumny: ${n}`, o_span_full: "Cały wiersz", size_hint: "Rozmiar: szerokość panelu, liczba kart w wierszu i szerokość każdej karty.",
       playing: "Teraz odtwarzane", no_playing: "Nic nie jest odtwarzane",
       need_music: "Do wyświetlania odtwarzaczy potrzebna jest karta <b>HOLM Music Card</b>. Zainstaluj ją z HACS (kaaribou/holm-music-card).",
