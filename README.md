@@ -34,7 +34,14 @@ HOLM Navbar Card pose en bas de l'écran (ou sur le côté, sur ordinateur) un *
 |---|---|
 | ![Sous-menu](docs/images/sous-menu.png) | ![Lecteurs en cours](docs/images/lecteurs-en-cours.png) |
 
-### 🆕 Nouveautés de la 1.7.1
+### 🆕 Nouveautés de la 1.8.0
+
+- ⬆️ **Barre en haut** ([#8](https://github.com/kaaribou/holm-navbar-card/issues/8)) : *Position sur ordinateur* → **En haut** (flottante, sous l'en-tête de Home Assistant) et *Sur mobile* → **Dockée en haut**. Le contenu de la vue est décalé d'autant, les sous-menus s'ouvrent vers le bas et le mini lecteur se place sous la barre. Voir [La barre en haut](#la-barre-en-haut).
+- 🔠 **Taille des icônes et du texte** ([#9](https://github.com/kaaribou/holm-navbar-card/issues/9)) : nouvelle option **Taille** (Normale, Grande, Très grande) qui agrandit ensemble icônes, libellés, pastilles et hauteur de la barre ; tailles précises en YAML avec `icon_size` et `label_size`. Voir [Taille](#taille-des-icônes-et-du-texte).
+- 👁️ **Visibilité conditionnelle** ([#10](https://github.com/kaaribou/holm-navbar-card/issues/10)) : quand Home Assistant masque la carte d'une vue (onglet *Visibilité* de la carte : état d'une entité, utilisateur, taille d'écran…), la barre est masquée sur cette vue, puis réapparaît dès que la condition est remplie. Voir [Masquer la barre selon une condition](#masquer-la-barre-selon-une-condition).
+- Mise à jour de la carte seulement : rafraîchissez le navigateur (Ctrl+F5).
+
+### Nouveautés de la 1.7.1
 
 - 🌍 **Traductions complétées** : les réglages de la 1.7.0 (identifiant de la barre, rôle de la carte, réglages propres à une vue…) sont maintenant traduits en allemand, espagnol, italien, néerlandais, portugais et polonais.
 - 🇬🇧 README en anglais (`README.en.md`).
@@ -92,6 +99,9 @@ Carte et éditeur traduits en **français, anglais, allemand, espagnol, italien,
 - [Cartes dans le panneau](#cartes-dans-le-panneau)
 - [Pastilles](#pastilles)
 - [Musique](#musique)
+- [La barre en haut](#la-barre-en-haut)
+- [Taille des icônes et du texte](#taille-des-icônes-et-du-texte)
+- [Masquer la barre selon une condition](#masquer-la-barre-selon-une-condition)
 - [Options générales](#options-générales)
 - [Exemple YAML complet](#exemple-yaml-complet)
 - [FAQ / dépannage](#faq--dépannage)
@@ -145,7 +155,7 @@ type: custom:holm-navbar-card
 
 En mode édition, la carte s'affiche comme un petit aperçu (« carte maître » ou « config commune ») ; en utilisation normale elle est invisible et **la barre apparaît en bas de l'écran**. Toute modification de la carte maître est appliquée partout, instantanément.
 
-> 💡 Une vue « secondaire » peut tout de même changer localement `labels`, `desktop_position`, `mobile_style` ou `auto_hide` (section *Réglages propres à cette vue* de l'éditeur ; « Comme la carte maître » = hérité).
+> 💡 Une vue « secondaire » peut tout de même changer localement `labels`, `desktop_position`, `mobile_style`, `auto_hide` ou `size` (section *Réglages propres à cette vue* de l'éditeur ; « Comme la carte maître » = hérité).
 
 ---
 
@@ -177,7 +187,7 @@ accent: "#ff7043"   # facultatif : réglages propres à ce tableau de bord
 ```
 
 - Les onglets se modifient **uniquement sur la carte maître** ; toute modification est reprise partout.
-- Une carte qui reprend une barre par identifiant peut garder ses propres `accent`, `theme`, `labels`, `label_lines`, `desktop_position`, `mobile_style`, `auto_hide` et `haptic`. Tout réglage laissé sur « Comme la carte maître » est hérité.
+- Une carte qui reprend une barre par identifiant peut garder ses propres `accent`, `theme`, `labels`, `label_lines`, `desktop_position`, `mobile_style`, `auto_hide`, `size` et `haptic`. Tout réglage laissé sur « Comme la carte maître » est hérité.
 - Utilisez des **adresses complètes** dans les onglets (`/lovelace/accueil`, `/dashboard-energie/0`) pour que chaque onglet ouvre le bon tableau de bord, d'où qu'on le touche.
 - La barre est mémorisée sur l'appareil : elle s'affiche immédiatement, puis se met à jour si la carte maître a changé.
 - Les tableaux de bord en mode YAML (fichier) ne sont pas lus : placez la carte maître dans un tableau de bord géré depuis l'interface.
@@ -303,6 +313,54 @@ Dans la section **Mini lecteur de musique** de la carte maître :
 
 ---
 
+## La barre en haut
+
+![La barre dockée en haut sur mobile, et son sous-menu qui s'ouvre vers le bas](docs/images/barre-en-haut.png)
+
+- **Sur mobile** → **Dockée en haut** (`mobile_style: top`) : la barre est collée sous l'en-tête de Home Assistant, sur toute la largeur, coins arrondis en bas.
+- **Position sur ordinateur** → **En haut** (`desktop_position: top`) : la barre flotte au centre, sous l'en-tête.
+
+![La barre en haut sur ordinateur](docs/images/barre-en-haut-ordinateur.png)
+
+En haut :
+
+- le **contenu de la vue** est décalé vers le bas pour ne jamais passer sous la barre ;
+- si l'en-tête de Home Assistant est masqué (kiosk-mode…), la barre se place tout en haut de l'écran ;
+- les **sous-menus** (appui long) s'ouvrent **vers le bas**, sous la barre ;
+- le **mini lecteur** de musique se place sous la barre ;
+- **Masquer en défilant** fait glisser la barre vers le haut.
+
+Comme les autres positions, elle peut être choisie pour une seule vue (section *Réglages propres à cette vue*).
+
+## Taille des icônes et du texte
+
+![Les tailles Normale, Grande et Très grande](docs/images/tailles.png)
+
+**Taille** (`size`) agrandit ensemble les icônes, les libellés, les pastilles et la hauteur de la barre (et la largeur du rail sur le côté) :
+
+| Valeur | Icônes | Libellés |
+|---|---|---|
+| **Normale** (`normal`) | 24 px | 10 px |
+| **Grande** (`large`) | 29 px | 12 px |
+| **Très grande** (`xlarge`) | 34 px | 14 px |
+
+Pour des valeurs précises (YAML) : `icon_size: 30` et `label_size: 13` (en pixels) ; la barre grandit pour les contenir. La taille peut aussi être propre à une vue (par exemple plus grande sur une tablette murale).
+
+## Masquer la barre selon une condition
+
+L'onglet **Visibilité** de la carte (ou `visibility:` en YAML) fonctionne : quand la condition n'est pas remplie, Home Assistant masque la carte **et la barre disparaît de cette vue** ; elle revient dès que la condition est de nouveau remplie, sans recharger la page. Toutes les conditions de Home Assistant marchent : état d'une entité, valeur numérique, utilisateur, taille d'écran, et / ou / non.
+
+```yaml
+# ne pas afficher le menu quand l'alarme est armée
+type: custom:holm-navbar-card
+visibility:
+  - condition: state
+    entity: alarm_control_panel.alarme
+    state: disarmed
+```
+
+La condition vaut pour la vue où se trouve la carte : mettez-la sur la carte de chaque vue concernée (carte maître comprise).
+
 ## Options générales
 
 | Option | Valeurs | Par défaut |
@@ -310,8 +368,10 @@ Dans la section **Mini lecteur de musique** de la carte maître :
 | `navbar_id` | identifiant de la barre : sur la carte maître, pour la partager ; sur une autre carte, pour reprendre cette barre | — |
 | `theme` | Apparence : `auto` (suit le mode clair / sombre), `dark`, `light`, `theme` (couleurs de votre thème) | `auto` |
 | `labels` | `active` (onglet actif), `all`, `none` | `active` |
-| `mobile_style` | `docked` (collée en bas), `floating` | `docked` |
-| `desktop_position` | `bottom`, `left`, `right`, `hidden` | `bottom` |
+| `mobile_style` | `docked` (collée en bas), `floating`, `top` (dockée en haut) | `docked` |
+| `desktop_position` | `bottom`, `top`, `left`, `right`, `hidden` | `bottom` |
+| `size` | `normal`, `large`, `xlarge` : taille des icônes, libellés et de la barre | `normal` |
+| `icon_size` / `label_size` | (YAML) taille précise des icônes / libellés, en px | selon `size` |
 | `auto_hide` | masquer la barre en faisant défiler | `false` |
 | `haptic` | vibration au toucher (application mobile) | `true` |
 | `accent` | couleur principale | `#26c6da` |
@@ -397,7 +457,8 @@ routes:
 |---|---|
 | La barre n'apparaît pas sur une vue | Ajoutez la carte `custom:holm-navbar-card` dans cette vue (sans réglage). La carte maître doit être dans **le même dashboard**, ou utilisez un [identifiant de barre](#plusieurs-tableaux-de-bord). |
 | « Aucune barre avec l'identifiant… » | Vérifiez l'identifiant sur la carte maître (majuscules comprises) et que son tableau de bord est géré depuis l'interface. |
-| La barre cache le bas de la page | La carte ajoute automatiquement une marge en bas de la vue ; rechargez la page si besoin. |
+| La barre cache le bas (ou le haut) de la page | La carte ajoute automatiquement une marge à la vue ; rechargez la page si besoin. |
+| La barre reste affichée malgré la visibilité de la carte | Mettez la condition sur la carte **de cette vue** (la barre suit la carte de la vue affichée), puis Ctrl + F5. |
 | Pas de note de musique / panneau vide avec un message | Installez **HOLM Music Card** et **Music Assistant**, puis rechargez la page (Ctrl + F5). |
 | Un lecteur n'est pas pris en compte | Seuls les lecteurs de l'intégration **Music Assistant** sont surveillés ; vérifiez la liste *Lecteurs surveillés*. |
 | L'éditeur d'une carte ne s'affiche pas | Attendez une seconde (il est préchargé à l'ouverture de l'éditeur) ou rechargez la page ; vous pouvez aussi passer par l'éditeur de code `{ }`. |

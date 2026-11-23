@@ -12,11 +12,44 @@
  * - Interface en 8 langues (fr, en, de, es, it, nl, pt, pl).
  */
 (() => {
-  const VERSION = "1.7.1";
+  const VERSION = "1.8.0";
   const ACTIVE_STATES = ["on", "open", "opening", "unlocked", "playing", "home", "heat", "cool", "heat_cool", "armed_away", "armed_home", "armed_night", "triggered", "detected", "cleaning"];
-  const DEFAULTS = { theme: "auto", labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2 };
+  const DEFAULTS = { theme: "auto", labels: "active", desktop_position: "bottom", mobile_style: "docked", auto_hide: false, haptic: true, accent: "#26c6da", label_lines: 2, size: "normal" };
+  // taille de la barre (#9) : icônes, libellés, pastilles et hauteur grandissent ensemble
+  const SIZE_SCALE = { normal: 1, large: 1.2, xlarge: 1.4 };
   const MAX_DEPTH = 3; // panneaux imbriqués : onglet → sous-menu → sous-sous-menu
   const store = (window.__holmNavbar = window.__holmNavbar || { cfg: {}, bar: null, owner: null });
+  // #10 : la carte de la vue affichée est masquée par une condition de visibilité de Home Assistant
+  const isNavCfg = (c) => !!c && (c.type === "custom:holm-navbar-card" || (c.type === "conditional" && isNavCfg(c.card)));
+  // conteneurs de la carte dans la vue affichée (la carte masquée dès l'ouverture de la vue n'est jamais créée : on cherche donc
+  // aussi les conteneurs par leur configuration), recherchés une fois par vue
+  const viewHosts = () => {
+    const key = location.pathname;
+    if (store.vhKey === key && (store.vh || []).every((h) => h.isConnected)) return store.vh;
+    const out = [];
+    try {
+      const ha = document.querySelector("home-assistant");
+      const main = ha && ha.shadowRoot.querySelector("home-assistant-main");
+      const ppr = main && main.shadowRoot.querySelector("partial-panel-resolver");
+      const panel = ppr && ppr.querySelector("ha-panel-lovelace");
+      const root = panel && panel.shadowRoot.querySelector("hui-root");
+      const view = root && root.shadowRoot.querySelector("#view");
+      const walk = (n, d) => {
+        if (!n || d > 30) return;
+        if (n.tagName === "HUI-CARD" && isNavCfg(n.config)) { out.push(n); return; }
+        if (n.shadowRoot) for (const c of n.shadowRoot.children) walk(c, d + 1);
+        for (const c of n.children) walk(c, d + 1);
+      };
+      walk(view, 0);
+    } catch (e) { /* structure de Home Assistant inattendue */ }
+    store.vhKey = key; store.vh = out;
+    return out;
+  };
+  const isHidden = (h) => h.isConnected && (h.hasAttribute("hidden") || h.style.display === "none");
+  const hiddenByHA = () => {
+    const hs = [...viewHosts(), ...(store.hosts || []).filter((h) => h.isConnected)];
+    return hs.length > 0 && hs.every(isHidden);
+  };
 
   // ------------------------------------------------------------------
   //  Traductions (fr, en, de, es, it, nl, pt, pl)
@@ -43,6 +76,7 @@
       f_action: "Au toucher", f_perform_action: "Action (ex. script.bonne_nuit)", f_badge_entities: "Pastille : compter les entités actives", f_users: "Visible seulement pour (nom d'utilisateur)",
       f_music: "Note de musique si lecture en cours + lecteurs à l'appui long", f_music_players: "Lecteurs surveillés (vide = tous ceux de Music Assistant)",
       f_label_lines: "Lignes des libellés", f_language: "Langue", f_cards_position: "Position des cartes",
+      f_size: "Taille", o_s1: "Normale", o_s2: "Grande", o_s3: "Très grande", o_pos_top: "En haut", o_docked_top: "Dockée en haut",
       o_active: "Onglet actif", o_all: "Tous", o_none: "Aucun", o_docked: "Dockée en bas", o_floating: "Flottante", o_bottom: "En bas", o_left: "À gauche", o_right: "À droite", o_hidden: "Masquée",
       o_only_playing: "Seulement pendant la lecture", o_always: "Toujours", o_cover: "Pochette", o_vinyl: "Vinyle",
       o_lines1: "1 ligne", o_lines2: "2 lignes", o_lines3: "3 lignes", o_lines0: "Illimité", o_auto: "Automatique (langue de Home Assistant)", o_top: "Au-dessus des tuiles", o_below: "Sous les tuiles",
@@ -82,6 +116,7 @@
       f_action: "On tap", f_perform_action: "Action (e.g. script.good_night)", f_badge_entities: "Badge: count active entities", f_users: "Only visible to (user name)",
       f_music: "Music note while playing + players on long press", f_music_players: "Watched players (empty = all Music Assistant players)",
       f_label_lines: "Label lines", f_language: "Language", f_cards_position: "Cards position",
+      f_size: "Size", o_s1: "Normal", o_s2: "Large", o_s3: "Extra large", o_pos_top: "Top", o_docked_top: "Docked at the top",
       o_active: "Active tab", o_all: "All", o_none: "None", o_docked: "Docked at the bottom", o_floating: "Floating", o_bottom: "Bottom", o_left: "Left", o_right: "Right", o_hidden: "Hidden",
       o_only_playing: "Only while playing", o_always: "Always", o_cover: "Cover", o_vinyl: "Vinyl",
       o_lines1: "1 line", o_lines2: "2 lines", o_lines3: "3 lines", o_lines0: "Unlimited", o_auto: "Automatic (Home Assistant language)", o_top: "Above the tiles", o_below: "Below the tiles",
@@ -123,6 +158,7 @@
       f_action: "Beim Tippen", f_perform_action: "Aktion (z. B. script.gute_nacht)", f_badge_entities: "Plakette: aktive Entitäten zählen", f_users: "Nur sichtbar für (Benutzername)",
       f_music: "Musiknote bei Wiedergabe + Player bei langem Drücken", f_music_players: "Überwachte Player (leer = alle von Music Assistant)",
       f_label_lines: "Zeilen der Beschriftung", f_language: "Sprache", f_cards_position: "Position der Karten",
+      f_size: "Größe", o_s1: "Normal", o_s2: "Groß", o_s3: "Sehr groß", o_pos_top: "Oben", o_docked_top: "Oben angedockt",
       o_active: "Aktiver Tab", o_all: "Alle", o_none: "Keine", o_docked: "Unten angedockt", o_floating: "Schwebend", o_bottom: "Unten", o_left: "Links", o_right: "Rechts", o_hidden: "Ausgeblendet",
       o_only_playing: "Nur während der Wiedergabe", o_always: "Immer", o_cover: "Cover", o_vinyl: "Vinyl",
       o_lines1: "1 Zeile", o_lines2: "2 Zeilen", o_lines3: "3 Zeilen", o_lines0: "Unbegrenzt", o_auto: "Automatisch (Sprache von Home Assistant)", o_top: "Über den Kacheln", o_below: "Unter den Kacheln",
@@ -164,6 +200,7 @@
       f_action: "Al tocar", f_perform_action: "Acción (p. ej. script.buenas_noches)", f_badge_entities: "Indicador: contar entidades activas", f_users: "Visible solo para (nombre de usuario)",
       f_music: "Nota musical si hay reproducción + reproductores con pulsación larga", f_music_players: "Reproductores vigilados (vacío = todos los de Music Assistant)",
       f_label_lines: "Líneas de las etiquetas", f_language: "Idioma", f_cards_position: "Posición de las tarjetas",
+      f_size: "Tamaño", o_s1: "Normal", o_s2: "Grande", o_s3: "Muy grande", o_pos_top: "Arriba", o_docked_top: "Fija arriba",
       o_active: "Pestaña activa", o_all: "Todas", o_none: "Ninguna", o_docked: "Fija abajo", o_floating: "Flotante", o_bottom: "Abajo", o_left: "A la izquierda", o_right: "A la derecha", o_hidden: "Oculta",
       o_only_playing: "Solo durante la reproducción", o_always: "Siempre", o_cover: "Carátula", o_vinyl: "Vinilo",
       o_lines1: "1 línea", o_lines2: "2 líneas", o_lines3: "3 líneas", o_lines0: "Sin límite", o_auto: "Automático (idioma de Home Assistant)", o_top: "Encima de los mosaicos", o_below: "Debajo de los mosaicos",
@@ -205,6 +242,7 @@
       f_action: "Al tocco", f_perform_action: "Azione (es. script.buonanotte)", f_badge_entities: "Badge: conta le entità attive", f_users: "Visibile solo per (nome utente)",
       f_music: "Nota musicale durante la riproduzione + lettori con pressione lunga", f_music_players: "Lettori monitorati (vuoto = tutti quelli di Music Assistant)",
       f_label_lines: "Righe delle etichette", f_language: "Lingua", f_cards_position: "Posizione delle schede",
+      f_size: "Dimensione", o_s1: "Normale", o_s2: "Grande", o_s3: "Molto grande", o_pos_top: "In alto", o_docked_top: "Ancorata in alto",
       o_active: "Scheda attiva", o_all: "Tutte", o_none: "Nessuna", o_docked: "Ancorata in basso", o_floating: "Fluttuante", o_bottom: "In basso", o_left: "A sinistra", o_right: "A destra", o_hidden: "Nascosta",
       o_only_playing: "Solo durante la riproduzione", o_always: "Sempre", o_cover: "Copertina", o_vinyl: "Vinile",
       o_lines1: "1 riga", o_lines2: "2 righe", o_lines3: "3 righe", o_lines0: "Illimitate", o_auto: "Automatica (lingua di Home Assistant)", o_top: "Sopra i riquadri", o_below: "Sotto i riquadri",
@@ -246,6 +284,7 @@
       f_action: "Bij tikken", f_perform_action: "Actie (bijv. script.welterusten)", f_badge_entities: "Badge: actieve entiteiten tellen", f_users: "Alleen zichtbaar voor (gebruikersnaam)",
       f_music: "Muzieknoot tijdens afspelen + spelers bij lang indrukken", f_music_players: "Gevolgde spelers (leeg = alle van Music Assistant)",
       f_label_lines: "Regels van de labels", f_language: "Taal", f_cards_position: "Positie van de kaarten",
+      f_size: "Grootte", o_s1: "Normaal", o_s2: "Groot", o_s3: "Zeer groot", o_pos_top: "Bovenaan", o_docked_top: "Bovenaan vast",
       o_active: "Actief tabblad", o_all: "Alle", o_none: "Geen", o_docked: "Onderaan vast", o_floating: "Zwevend", o_bottom: "Onderaan", o_left: "Links", o_right: "Rechts", o_hidden: "Verborgen",
       o_only_playing: "Alleen tijdens afspelen", o_always: "Altijd", o_cover: "Hoes", o_vinyl: "Vinyl",
       o_lines1: "1 regel", o_lines2: "2 regels", o_lines3: "3 regels", o_lines0: "Onbeperkt", o_auto: "Automatisch (taal van Home Assistant)", o_top: "Boven de tegels", o_below: "Onder de tegels",
@@ -287,6 +326,7 @@
       f_action: "Ao tocar", f_perform_action: "Ação (ex. script.boa_noite)", f_badge_entities: "Indicador: contar entidades ativas", f_users: "Visível apenas para (nome de utilizador)",
       f_music: "Nota musical durante a reprodução + leitores com toque longo", f_music_players: "Leitores vigiados (vazio = todos os do Music Assistant)",
       f_label_lines: "Linhas das etiquetas", f_language: "Idioma", f_cards_position: "Posição dos cartões",
+      f_size: "Tamanho", o_s1: "Normal", o_s2: "Grande", o_s3: "Muito grande", o_pos_top: "Em cima", o_docked_top: "Fixa em cima",
       o_active: "Separador ativo", o_all: "Todos", o_none: "Nenhum", o_docked: "Fixa em baixo", o_floating: "Flutuante", o_bottom: "Em baixo", o_left: "À esquerda", o_right: "À direita", o_hidden: "Oculta",
       o_only_playing: "Só durante a reprodução", o_always: "Sempre", o_cover: "Capa", o_vinyl: "Vinil",
       o_lines1: "1 linha", o_lines2: "2 linhas", o_lines3: "3 linhas", o_lines0: "Ilimitado", o_auto: "Automático (idioma do Home Assistant)", o_top: "Acima dos mosaicos", o_below: "Abaixo dos mosaicos",
@@ -328,6 +368,7 @@
       f_action: "Po dotknięciu", f_perform_action: "Akcja (np. script.dobranoc)", f_badge_entities: "Plakietka: licz aktywne encje", f_users: "Widoczne tylko dla (nazwa użytkownika)",
       f_music: "Nuta podczas odtwarzania + odtwarzacze po długim naciśnięciu", f_music_players: "Obserwowane odtwarzacze (puste = wszystkie z Music Assistant)",
       f_label_lines: "Wiersze etykiet", f_language: "Język", f_cards_position: "Pozycja kart",
+      f_size: "Rozmiar", o_s1: "Normalny", o_s2: "Duży", o_s3: "Bardzo duży", o_pos_top: "Na górze", o_docked_top: "Zadokowany na górze",
       o_active: "Aktywna zakładka", o_all: "Wszystkie", o_none: "Brak", o_docked: "Zadokowany na dole", o_floating: "Pływający", o_bottom: "Na dole", o_left: "Po lewej", o_right: "Po prawej", o_hidden: "Ukryty",
       o_only_playing: "Tylko podczas odtwarzania", o_always: "Zawsze", o_cover: "Okładka", o_vinyl: "Winyl",
       o_lines1: "1 wiersz", o_lines2: "2 wiersze", o_lines3: "3 wiersze", o_lines0: "Bez limitu", o_auto: "Automatycznie (język Home Assistant)", o_top: "Nad kafelkami", o_below: "Pod kafelkami",
@@ -451,6 +492,8 @@
     }
     t(key, ...a) { return tr(langOf(this.config, this.hass), key, ...a); }
     connectedCallback() {
+      clearInterval(this._visPoll);
+      this._visPoll = setInterval(() => { const h = hiddenByHA(); if (h !== this._hidHA) { this._hidHA = h; if (h) this.closePop(); this._checkScope(); } }, 500);
       window.addEventListener("location-changed", this._onLoc);
       window.addEventListener("popstate", this._onLoc);
       window.addEventListener("resize", this._onResize);
@@ -458,6 +501,7 @@
       document.addEventListener("scroll", this._onScroll, { capture: true, passive: true });
     }
     disconnectedCallback() {
+      clearInterval(this._visPoll);
       window.removeEventListener("location-changed", this._onLoc);
       window.removeEventListener("popstate", this._onLoc);
       window.removeEventListener("resize", this._onResize);
@@ -524,7 +568,8 @@
       this._pad(this.style.display !== "none");
     }
     _checkScope() {
-      const inDash = dashOf() === this.dash && !store.editing && !new URLSearchParams(location.search).has("edit");
+      // #10 : la carte de la vue est masquée par Home Assistant (visibilité conditionnelle) → la barre aussi
+      const inDash = dashOf() === this.dash && !store.editing && !new URLSearchParams(location.search).has("edit") && !hiddenByHA();
       this.style.display = inDash ? "" : "none";
       this._pad(inDash);
       if (!inDash) this.closePop();
@@ -538,22 +583,51 @@
         const root = panel && panel.shadowRoot.querySelector("hui-root");
         const view = root && root.shadowRoot.querySelector("#view");
         if (!view) return;
-        const desk = this._desktop();
-        const pos = this.config.desktop_position;
-        const extra = this._musicOn ? 74 : 0;
-        view.style.paddingBottom = on && (!desk || pos === "bottom") ? (!desk && (this.config.mobile_style || "docked") === "docked" ? `calc(env(safe-area-inset-bottom) + ${80 + extra}px)` : `calc(env(safe-area-inset-bottom) + ${96 + extra}px)`) : on && extra ? `${extra + 16}px` : "";
-        view.style.paddingLeft = on && desk && pos === "left" ? "92px" : "";
-        view.style.paddingRight = on && desk && pos === "right" ? "92px" : "";
+        const pos = this.dataset.pos || "bottom", docked = this.dataset.docked === "1";
+        const extra = this._musicOn ? 74 : 0, dd = this._dd || 0;
+        view.style.paddingBottom = on && pos === "bottom" ? (docked ? `calc(env(safe-area-inset-bottom) + ${80 + extra + dd}px)` : `calc(env(safe-area-inset-bottom) + ${96 + extra + dd}px)`) : on && extra && pos !== "top" ? `${extra + 16}px` : "";
+        // #8 : barre en haut, sous l'en-tête de Home Assistant
+        // le padding du haut de la vue contient déjà la place de l'en-tête : on y ajoute la barre
+        view.style.paddingTop = on && pos === "top" ? `${(this._hnTop || 0) + (docked ? 72 : 84) + extra + dd}px` : "";
+        const rail = Math.round(92 + ((this._scale || 1) - 1) * 72);
+        view.style.paddingLeft = on && pos === "left" ? `${rail}px` : "";
+        view.style.paddingRight = on && pos === "right" ? `${rail}px` : "";
       } catch (e) { /* ignore */ }
     }
     _desktop() {
       return window.innerWidth >= 1024;
     }
+    // bas de l'en-tête de Home Assistant (0 s'il est masqué, par exemple avec kiosk-mode) : la barre du haut se pose dessous
+    _headerTop() {
+      try {
+        const ha = document.querySelector("home-assistant");
+        const main = ha && ha.shadowRoot.querySelector("home-assistant-main");
+        const ppr = main && main.shadowRoot.querySelector("partial-panel-resolver");
+        const panel = ppr && ppr.querySelector("ha-panel-lovelace");
+        const root = panel && panel.shadowRoot.querySelector("hui-root");
+        const hd = root && root.shadowRoot.querySelector(".header, app-header, .toolbar");
+        if (!hd) return 0;
+        const r = hd.getBoundingClientRect();
+        return r.height > 0 && r.bottom > 0 ? Math.round(r.bottom) : 0;
+      } catch (e) { return 0; }
+    }
     _layout() {
-      const pos = this._desktop() ? this.config.desktop_position : "bottom";
+      const desk = this._desktop(), ms = this.config.mobile_style || "docked";
+      const pos = desk ? this.config.desktop_position || "bottom" : ms === "top" ? "top" : "bottom";
       this.dataset.pos = pos;
       this.dataset.labels = this.config.labels || "active";
-      this.dataset.docked = !this._desktop() && (this.config.mobile_style || "docked") === "docked" ? "1" : "0";
+      this.dataset.docked = !desk && (ms === "docked" || ms === "top") ? "1" : "0";
+      // taille (#9) : échelle générale, et tailles précises en YAML (icon_size, label_size en px)
+      const sc = SIZE_SCALE[this.config.size] || (+this.config.size > 0 ? +this.config.size : 1);
+      const icz = +this.config.icon_size > 0 ? +this.config.icon_size : 24 * sc, lbz = +this.config.label_size > 0 ? +this.config.label_size : 10 * sc;
+      const s2 = Math.max(sc, icz / 24, lbz / 10);
+      this._scale = s2;
+      this._dd = Math.round((s2 - 1) * 56);
+      this.style.setProperty("--s", String(s2));
+      this.style.setProperty("--icz", `${icz}px`);
+      this.style.setProperty("--lbz", `${lbz}px`);
+      this.style.setProperty("--dd", `${this._dd}px`);
+      if (pos === "top") { this._hnTop = this._headerTop(); this.style.setProperty("--hn-top", `${this._hnTop}px`); }
       const n = linesOf(this.config);
       this.style.setProperty("--tl-lines", n === 0 ? "99" : String(n));
       this.style.setProperty("--lb-lines", n === 0 ? "3" : String(Math.min(n, 2)));
@@ -911,7 +985,7 @@
 
     static css() {
       return `
-      :host { position: fixed; inset: 0; pointer-events: none; z-index: 6; --accent: #26c6da; --tl-lines: 2; --lb-lines: 2; font-family: var(--paper-font-body1_-_font-family, inherit); }
+      :host { position: fixed; inset: 0; pointer-events: none; z-index: 6; --accent: #26c6da; --s: 1; --icz: 24px; --lbz: 10px; --dd: 0px; --hn-top: 0px; --tl-lines: 2; --lb-lines: 2; font-family: var(--paper-font-body1_-_font-family, inherit); }
       button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
       .dock {
         position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); transform: translateX(-50%);
@@ -933,21 +1007,21 @@
         box-shadow: 0 0 18px color-mix(in srgb, var(--c) 45%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.25);
         transition: transform .45s cubic-bezier(.34,1.45,.55,1), width .35s, height .35s, opacity .3s, background .4s, box-shadow .4s;
       }
-      .it { position: relative; flex: 1 1 0; min-width: 0; min-height: 52px; padding: 4px 0; box-sizing: border-box; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: rgba(225,238,244,.72); transition: transform .2s, flex-grow .4s cubic-bezier(.34,1.3,.55,1); }
-      :host([data-labels="active"][data-pos="bottom"]) .it.active { flex-grow: 2.1; }
+      .it { position: relative; flex: 1 1 0; min-width: 0; min-height: calc(52px * var(--s)); padding: 4px 0; box-sizing: border-box; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: rgba(225,238,244,.72); transition: transform .2s, flex-grow .4s cubic-bezier(.34,1.3,.55,1); }
+      :host([data-labels="active"][data-pos="bottom"]) .it.active, :host([data-labels="active"][data-pos="top"]) .it.active { flex-grow: 2.1; }
       .it.down { transform: scale(.88); }
       .it.pop-anim .ic { animation: boing .5s cubic-bezier(.3,1.6,.5,1); }
       @keyframes boing { 0% { transform: scale(.8); } 60% { transform: scale(1.18) translateY(-2px); } 100% { transform: none; } }
-      .ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--c); filter: saturate(.75) brightness(.95); transition: filter .3s, transform .3s; }
-      .ic ha-icon { --mdc-icon-size: 24px; }
-      .ic img { width: 26px; height: 26px; object-fit: contain; border-radius: 8px; }
+      .ic { position: relative; display: grid; place-items: center; width: calc(var(--icz) + 4px); height: calc(var(--icz) + 4px); flex: none; color: var(--c); filter: saturate(.75) brightness(.95); transition: filter .3s, transform .3s; }
+      .ic ha-icon { --mdc-icon-size: var(--icz); }
+      .ic img { width: calc(var(--icz) + 2px); height: calc(var(--icz) + 2px); object-fit: contain; border-radius: 8px; }
       .it.active .ic { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--c) 80%, transparent)) saturate(1.2) brightness(1.15); transform: translateY(-1px); }
-      .lb { font-size: 10px; font-weight: 700; line-height: 1.15; letter-spacing: .01em; max-width: 100%; padding: 0 3px; box-sizing: border-box; text-align: center; color: #fff;
+      .lb { font-size: var(--lbz); font-weight: 700; line-height: 1.15; letter-spacing: .01em; max-width: 100%; padding: 0 3px; box-sizing: border-box; text-align: center; color: #fff;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .lb.w { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lb-lines); }
       :host([data-labels="none"]) .lb, :host([data-labels="active"]) .it:not(.active) .lb { display: none; }
       .lb:empty { display: none; }
-      .badge { position: absolute; top: -5px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; color: #fff; background: #ef4444; box-shadow: 0 0 0 2px rgba(14,20,28,.9); transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+      .badge { position: absolute; top: -5px; right: -9px; min-width: calc(16px * var(--s)); height: calc(16px * var(--s)); padding: 0 4px; box-sizing: border-box; border-radius: 9px; font-size: calc(10px * var(--s)); font-weight: 800; line-height: calc(16px * var(--s)); text-align: center; color: #fff; background: #ef4444; box-shadow: 0 0 0 2px rgba(14,20,28,.9); transform: scale(0); transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
       .badge.show { transform: scale(1); }
       .badge.dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: -2px; right: -4px; animation: pulse 1.8s ease-in-out infinite; }
       .badge.mnote { min-width: 20px; height: 20px; top: -8px; right: -12px; padding: 0 3px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 1px;
@@ -967,21 +1041,30 @@
         box-shadow: 0 -8px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1);
       }
       :host([data-docked="1"].hidden) .dock { transform: translateY(calc(100% + 10px)); }
-      :host([data-docked="1"]) .pop { bottom: calc(env(safe-area-inset-bottom) + 74px); }
+      :host([data-docked="1"]) .pop { bottom: calc(env(safe-area-inset-bottom) + 74px + var(--dd)); }
       /* bureau : rail latéral */
-      :host([data-pos="left"]) .dock, :host([data-pos="right"]) .dock { left: 12px; right: auto; top: 50%; bottom: auto; transform: translateY(-50%); width: 72px; padding: 6px; }
+      :host([data-pos="left"]) .dock, :host([data-pos="right"]) .dock { left: 12px; right: auto; top: 50%; bottom: auto; transform: translateY(-50%); width: calc(72px * var(--s)); padding: 6px; }
       :host([data-pos="right"]) .dock { left: auto; right: 12px; }
       :host([data-pos="left"]) .items, :host([data-pos="right"]) .items { flex-direction: column; }
-      :host([data-pos="left"]) .it, :host([data-pos="right"]) .it { flex: 0 0 auto; min-height: 58px; }
+      :host([data-pos="left"]) .it, :host([data-pos="right"]) .it { flex: 0 0 auto; min-height: calc(58px * var(--s)); }
       :host([data-pos="left"].hidden) .dock, :host([data-pos="right"].hidden) .dock { transform: translateY(-50%); opacity: 1; }
       :host([data-pos="hidden"]) .dock { display: none; }
-      @media (min-width: 1024px) { :host([data-pos="bottom"]) .dock { width: auto; min-width: 520px; } :host([data-pos="bottom"]) .it, :host([data-pos="bottom"]) .it.active { flex: 0 0 76px; } }
+      @media (min-width: 1024px) { :host([data-pos="bottom"]) .dock, :host([data-pos="top"]) .dock { width: auto; min-width: 520px; } :host([data-pos="bottom"]) .it, :host([data-pos="bottom"]) .it.active, :host([data-pos="top"]) .it, :host([data-pos="top"]) .it.active { flex: 0 0 calc(76px * var(--s)); } }
+      /* #8 : barre en haut, sous l'en-tête (flottante sur ordinateur, collée sur mobile) */
+      :host([data-pos="top"]) .dock { top: calc(var(--hn-top) + 10px); bottom: auto; }
+      :host([data-pos="top"].hidden) .dock { transform: translate(-50%, calc(-100% - 30px - var(--hn-top))); }
+      :host([data-pos="top"][data-docked="1"]) .dock { top: var(--hn-top); bottom: auto; padding: 6px; border-radius: 0 0 22px 22px; border-width: 0 0 1px 0; box-shadow: 0 8px 30px rgba(0,0,0,.4), inset 0 -1px 0 rgba(255,255,255,.06); }
+      :host([data-pos="top"][data-docked="1"].hidden) .dock { transform: translateY(calc(-100% - 10px - var(--hn-top))); }
 
       /* mini lecteur Music Assistant */
-      .music { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px); transform: translate(-50%, 24px) scale(.96); width: min(calc(100vw - 16px), 520px); pointer-events: none; opacity: 0; transition: opacity .35s, transform .45s cubic-bezier(.3,1.4,.5,1); }
+      .music { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 84px + var(--dd)); transform: translate(-50%, 24px) scale(.96); width: min(calc(100vw - 16px), 520px); pointer-events: none; opacity: 0; transition: opacity .35s, transform .45s cubic-bezier(.3,1.4,.5,1); }
       :host([data-music]) .music { pointer-events: auto; opacity: 1; transform: translate(-50%, 0); }
       .music holm-music-card { display: block; filter: drop-shadow(0 12px 28px rgba(0,0,0,.45)); }
-      :host([data-docked="1"]) .music { bottom: calc(env(safe-area-inset-bottom) + 78px); }
+      :host([data-docked="1"]) .music { bottom: calc(env(safe-area-inset-bottom) + 78px + var(--dd)); }
+      :host([data-pos="top"]) .music { bottom: auto; top: calc(var(--hn-top) + 84px + var(--dd)); transform: translate(-50%, -24px) scale(.96); }
+      :host([data-pos="top"][data-docked="1"]) .music { top: calc(var(--hn-top) + 76px + var(--dd)); }
+      :host([data-music][data-pos="top"]) .music { transform: translate(-50%, 0); }
+      :host([data-pos="top"].hidden) .music { transform: translate(-50%, calc(-140px - var(--hn-top))); }
       :host(.hidden) .music { transform: translate(-50%, 140px); }
       :host([data-pos="left"]) .music, :host([data-pos="right"]) .music, :host([data-pos="hidden"]) .music { left: auto; right: 16px; bottom: 16px; width: 380px; transform: translateY(24px); }
       :host([data-pos="right"]) .music { right: 100px; }
@@ -991,7 +1074,7 @@
       .scrim { position: absolute; inset: 0; background: rgba(4,8,12,.35); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; transition: opacity .25s; }
       :host(.open) .scrim { opacity: 1; pointer-events: auto; }
       .pop {
-        position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 76px); width: min(calc(100vw - 20px), 460px); box-sizing: border-box;
+        position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 76px + var(--dd)); width: min(calc(100vw - 20px), 460px); box-sizing: border-box;
         padding: 12px; border-radius: 26px; pointer-events: none; opacity: 0; display: flex; flex-direction: column;
         transform-origin: var(--ox, 50%) 100%; transform: translateX(-50%) translateY(16px) scale(.92);
         background: linear-gradient(180deg, rgba(30,42,52,.78), rgba(12,18,26,.88));
@@ -1001,6 +1084,10 @@
         transition: opacity .22s, transform .38s cubic-bezier(.3,1.35,.5,1), width .3s;
       }
       :host(.open) .pop { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
+      /* #8 : en haut, le sous-menu s'ouvre vers le bas */
+      :host([data-pos="top"]) .pop { bottom: auto; top: calc(var(--hn-top) + 76px + var(--dd)); transform-origin: var(--ox, 50%) 0; transform: translateX(-50%) translateY(-16px) scale(.92); }
+      :host([data-pos="top"][data-docked="1"]) .pop { top: calc(var(--hn-top) + 72px + var(--dd)); }
+      :host([data-pos="top"].open) .pop { transform: translateX(-50%) translateY(0) scale(1); }
       :host([data-pos="left"]) .pop, :host([data-pos="right"]) .pop { bottom: auto; top: 50%; transform: translate(-50%, -50%) scale(.92); }
       :host([data-pos="left"].open) .pop, :host([data-pos="right"].open) .pop { transform: translate(-50%, -50%) scale(1); }
       .pop-h { display: flex; align-items: center; gap: 8px; margin: 2px 4px 10px; min-height: 22px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: rgba(225,238,244,.75); }
@@ -1175,6 +1262,18 @@
       clearInterval(this._poll);
       if (store.owner === this) store.owner = null;
     }
+    // #10 : les conteneurs Home Assistant de la carte (hui-card, carte conditionnelle). Quand une condition de visibilité
+    // n'est plus remplie, Home Assistant masque le conteneur et retire la carte : la barre se règle sur ce conteneur.
+    _hosts() {
+      const out = [];
+      let n = this;
+      for (let i = 0; i < 40 && n; i++) {
+        if (n.tagName && /^HUI-(CARD|CONDITIONAL-CARD)$/.test(n.tagName)) out.push(n);
+        if (n.tagName === "HUI-ROOT") break;
+        n = n.parentNode || n.host;
+      }
+      return out;
+    }
     _isPreview() {
       let n = this;
       for (let i = 0; i < 14 && n; i++) {
@@ -1196,6 +1295,7 @@
       if (!this.shadowRoot || !this._config) return;
       const mode = this._isPreview() ? "preview" : this._isEditing() ? "edit" : "live";
       if (mode !== "preview") store.editing = mode === "edit";
+      if (mode === "live" && this.isConnected) { const h = this._hosts(); if (h.length) store.hosts = h; }
       if (store.bar) store.bar._checkScope();
       if (mode === this._mode && this._routesKey === JSON.stringify(this._config.routes || null)) return;
       this._mode = mode;
@@ -1318,7 +1418,7 @@
   }
   const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
   // réglages qu'une carte « fille » peut garder pour sa vue ; avec navbar_id, aussi la couleur, l'apparence, la vibration et les lignes
-  const LOCAL_KEYS = ["labels", "desktop_position", "mobile_style", "auto_hide"];
+  const LOCAL_KEYS = ["labels", "desktop_position", "mobile_style", "auto_hide", "size"];
   const LOCAL_KEYS_ID = [...LOCAL_KEYS, "accent", "theme", "haptic", "label_lines"];
   const idOf = (c) => (c && (c.navbar_id || "").toString().trim()) || null;
   const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
@@ -1604,7 +1704,7 @@
           { name: "panel_width", selector: { select: { mode: "dropdown", options: ["auto", "narrow", "normal", "large", "xlarge", "full"].map((v) => ({ value: v, label: this.t("o_pw_" + v) })) } } },
           { name: "cards_columns", selector: { select: { mode: "dropdown", options: [1, 2, 3].map((n) => ({ value: String(n), label: this.t("o_cols", n) })) } } },
         ] }];
-        if (item.popup && item.popup.length) schema.push({ name: "cards_position", selector: { select: { mode: "dropdown", options: [{ value: "top", label: this.t("o_top") }, { value: "bottom", label: this.t("o_below") }] } } });
+        if (item.popup && item.popup.length) schema.push({ name: "cards_position", selector: { select: { mode: "dropdown", options: [{ value: "top", label: this.t("o_pos_top") }, { value: "bottom", label: this.t("o_below") }] } } });
         const hint = document.createElement("div");
         hint.className = "hn-subh";
         hint.textContent = this.t("size_hint");
@@ -1849,8 +1949,9 @@
         const yn = [inh, { value: "true", label: this.t("o_yes") }, { value: "false", label: this.t("o_no") }];
         const all = {
           labels: { select: { mode: "dropdown", options: [inh, { value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } },
-          mobile_style: { select: { mode: "dropdown", options: [inh, { value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } },
-          desktop_position: { select: { mode: "dropdown", options: [inh, { value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } },
+          mobile_style: { select: { mode: "dropdown", options: [inh, { value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }, { value: "top", label: this.t("o_docked_top") }] } },
+          desktop_position: { select: { mode: "dropdown", options: [inh, { value: "bottom", label: this.t("o_bottom") }, { value: "top", label: this.t("o_pos_top") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } },
+          size: { select: { mode: "dropdown", options: [inh, { value: "normal", label: this.t("o_s1") }, { value: "large", label: this.t("o_s2") }, { value: "xlarge", label: this.t("o_s3") }] } },
           theme: { select: { mode: "dropdown", options: [inh, { value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } },
           label_lines: { select: { mode: "dropdown", options: [inh, { value: "1", label: this.t("o_lines1") }, { value: "2", label: this.t("o_lines2") }, { value: "3", label: this.t("o_lines3") }, { value: "0", label: this.t("o_lines0") }] } },
           auto_hide: { select: { mode: "dropdown", options: yn } },
@@ -1881,8 +1982,11 @@
       out.appendChild(this._form([
           { type: "grid", name: "", schema: [
             { name: "labels", selector: { select: { mode: "dropdown", options: [{ value: "active", label: this.t("o_active") }, { value: "all", label: this.t("o_all") }, { value: "none", label: this.t("o_none") }] } } },
-            { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }] } } },
-            { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
+            { name: "mobile_style", selector: { select: { mode: "dropdown", options: [{ value: "docked", label: this.t("o_docked") }, { value: "floating", label: this.t("o_floating") }, { value: "top", label: this.t("o_docked_top") }] } } },
+            { name: "desktop_position", selector: { select: { mode: "dropdown", options: [{ value: "bottom", label: this.t("o_bottom") }, { value: "top", label: this.t("o_pos_top") }, { value: "left", label: this.t("o_left") }, { value: "right", label: this.t("o_right") }, { value: "hidden", label: this.t("o_hidden") }] } } },
+          ] },
+          { type: "grid", name: "", schema: [
+            { name: "size", selector: { select: { mode: "dropdown", options: [{ value: "normal", label: this.t("o_s1") }, { value: "large", label: this.t("o_s2") }, { value: "xlarge", label: this.t("o_s3") }] } } },
           ] },
           { type: "grid", name: "", schema: [
             { name: "theme", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: this.t("o_tauto") }, { value: "dark", label: this.t("o_tdark") }, { value: "light", label: this.t("o_tlight") }, { value: "theme", label: this.t("o_ttheme") }] } } },
@@ -1895,7 +1999,8 @@
             { name: "accent", selector: { text: {} } },
           ] },
         ], { ...DEFAULTS, language: "auto", ...c, label_lines: String(linesOf(c)) }, (v) => this._update((cc) => {
-          Object.assign(cc, pick(v, ["theme", "labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent"]));
+          Object.assign(cc, pick(v, ["theme", "labels", "desktop_position", "mobile_style", "auto_hide", "haptic", "accent", "size"]));
+          if (cc.size === "normal") delete cc.size;
           const n = parseInt(v.label_lines, 10);
           if (isNaN(n) || n === 2) delete cc.label_lines; else cc.label_lines = n;
           const langChanged = (cc.language || "auto") !== (v.language || "auto");

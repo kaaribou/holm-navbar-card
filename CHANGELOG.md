@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0
+- **Barre en haut** ([#8](https://github.com/kaaribou/holm-navbar-card/issues/8)) : `desktop_position: top` (flottante sous l'en-tête de Home Assistant) et `mobile_style: top` (dockée en haut). Marge de la vue en haut, sous-menus qui s'ouvrent vers le bas, mini lecteur sous la barre, masquage au défilement vers le haut ; si l'en-tête est masqué, la barre se place tout en haut.
+- **Taille** ([#9](https://github.com/kaaribou/holm-navbar-card/issues/9)) : option `size` (`normal`, `large`, `xlarge`) pour les icônes, libellés, pastilles et la hauteur de la barre (et la largeur du rail) ; `icon_size` et `label_size` en px pour des valeurs précises. Réglable aussi par vue.
+- **Visibilité conditionnelle** ([#10](https://github.com/kaaribou/holm-navbar-card/issues/10)) : la barre suit la visibilité de la carte de la vue affichée (onglet Visibilité, `visibility:`, toutes conditions) ; elle est masquée tant que la carte l'est, même si la vue s'ouvre avec la carte déjà masquée.
+- Traductions des nouvelles options dans les 8 langues.
+
 ## 1.7.1
 - **Traductions complétées** : les nouveaux réglages de la 1.7.0 (identifiant de la barre, barre à reprendre, rôle de cette carte, réglages propres à cette vue, messages d'aide) sont traduits en allemand, espagnol, italien, néerlandais, portugais et polonais (ils s'affichaient en anglais).
 - README en anglais (`README.en.md`).

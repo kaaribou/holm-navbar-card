@@ -36,7 +36,14 @@ HOLM Navbar Card places at the bottom of the screen (or on the side, on a comput
 |---|---|
 | ![Sub-menu](docs/images/sous-menu.png) | ![Playing now](docs/images/lecteurs-en-cours.png) |
 
-### 🆕 What's new in 1.7.1
+### 🆕 What's new in 1.8.0
+
+- ⬆️ **Bar at the top** ([#8](https://github.com/kaaribou/holm-navbar-card/issues/8)): *Position on desktop* → **Top** (floating, under the Home Assistant header) and *On mobile* → **Docked at the top**. The view content moves down accordingly, sub-menus open downwards and the mini player sits under the bar. See [The bar at the top](#the-bar-at-the-top).
+- 🔠 **Icon and text size** ([#9](https://github.com/kaaribou/holm-navbar-card/issues/9)): new **Size** option (Normal, Large, Extra large) that enlarges icons, labels, badges and bar height together; exact sizes in YAML with `icon_size` and `label_size`. See [Size](#icon-and-text-size).
+- 👁️ **Conditional visibility** ([#10](https://github.com/kaaribou/holm-navbar-card/issues/10)): when Home Assistant hides a view's card (card *Visibility* tab: entity state, user, screen size…), the bar is hidden on that view, and comes back as soon as the condition is met. See [Hide the bar on a condition](#hide-the-bar-on-a-condition).
+- Card-only update: refresh your browser (Ctrl+F5).
+
+### What's new in 1.7.1
 
 - 🌍 **Translations completed**: the 1.7.0 settings (bar ID, card role, settings for a view…) are now translated into German, Spanish, Italian, Dutch, Portuguese and Polish.
 - 🇬🇧 English README.
@@ -94,6 +101,9 @@ Card and editor translated into **English, French, German, Spanish, Italian, Dut
 - [Cards in the panel](#cards-in-the-panel)
 - [Badges](#badges)
 - [Music](#music)
+- [The bar at the top](#the-bar-at-the-top)
+- [Icon and text size](#icon-and-text-size)
+- [Hide the bar on a condition](#hide-the-bar-on-a-condition)
 - [General options](#general-options)
 - [Full YAML example](#full-yaml-example)
 - [FAQ / troubleshooting](#faq--troubleshooting)
@@ -147,7 +157,7 @@ type: custom:holm-navbar-card
 
 In edit mode, the card shows as a small preview (“main card” or “shared config”); in normal use it is invisible and **the bar appears at the bottom of the screen**. Any change to the main card is applied everywhere, instantly.
 
-> 💡 A “secondary” view can still change `labels`, `desktop_position`, `mobile_style` or `auto_hide` locally (*Settings for this view* section of the editor; “Same as main card” = inherited).
+> 💡 A “secondary” view can still change `labels`, `desktop_position`, `mobile_style`, `auto_hide` or `size` locally (*Settings for this view* section of the editor; “Same as main card” = inherited).
 
 ---
 
@@ -179,7 +189,7 @@ accent: "#ff7043"   # optional: settings for this dashboard
 ```
 
 - Tabs are edited **on the main card only**; every change is picked up everywhere.
-- A card reusing a bar by ID can keep its own `accent`, `theme`, `labels`, `label_lines`, `desktop_position`, `mobile_style`, `auto_hide` and `haptic`. Any setting left on “Same as main card” is inherited.
+- A card reusing a bar by ID can keep its own `accent`, `theme`, `labels`, `label_lines`, `desktop_position`, `mobile_style`, `auto_hide`, `size` and `haptic`. Any setting left on “Same as main card” is inherited.
 - Use **full addresses** in tabs (`/lovelace/home`, `/dashboard-energy/0`) so each tab opens the right dashboard wherever it is tapped.
 - The bar is remembered on the device: it shows immediately, then updates if the main card has changed.
 - Dashboards in YAML mode (file) are not read: put the main card in a dashboard managed from the UI.
@@ -305,6 +315,54 @@ In the main card's **Music mini player** section:
 
 ---
 
+## The bar at the top
+
+![The bar docked at the top on mobile, and its sub-menu opening downwards](docs/images/barre-en-haut.png)
+
+- **On mobile** → **Docked at the top** (`mobile_style: top`): the bar sticks under the Home Assistant header, full width, rounded corners at the bottom.
+- **Position on desktop** → **Top** (`desktop_position: top`): the bar floats in the centre, under the header.
+
+![The bar at the top on desktop](docs/images/barre-en-haut-ordinateur.png)
+
+At the top:
+
+- the **view content** moves down so it never goes under the bar;
+- if the Home Assistant header is hidden (kiosk-mode…), the bar goes to the very top of the screen;
+- **sub-menus** (long press) open **downwards**, under the bar;
+- the music **mini player** sits under the bar;
+- **Hide on scroll** slides the bar upwards.
+
+Like the other positions, it can be chosen for a single view (*Settings for this view* section).
+
+## Icon and text size
+
+![Normal, Large and Extra large sizes](docs/images/tailles.png)
+
+**Size** (`size`) enlarges icons, labels, badges and the bar height together (and the side rail width):
+
+| Value | Icons | Labels |
+|---|---|---|
+| **Normal** (`normal`) | 24 px | 10 px |
+| **Large** (`large`) | 29 px | 12 px |
+| **Extra large** (`xlarge`) | 34 px | 14 px |
+
+For exact values (YAML): `icon_size: 30` and `label_size: 13` (in pixels); the bar grows to fit them. Size can also be set for a single view (larger on a wall tablet, for instance).
+
+## Hide the bar on a condition
+
+The card's **Visibility** tab (or `visibility:` in YAML) works: when the condition is not met, Home Assistant hides the card **and the bar disappears from that view**; it comes back as soon as the condition is met again, without reloading. All Home Assistant conditions work: entity state, numeric value, user, screen size, and / or / not.
+
+```yaml
+# hide the menu while the alarm is armed
+type: custom:holm-navbar-card
+visibility:
+  - condition: state
+    entity: alarm_control_panel.alarm
+    state: disarmed
+```
+
+The condition applies to the view the card is in: put it on the card of each view concerned (main card included).
+
 ## General options
 
 | Option | Values | Default |
@@ -312,8 +370,10 @@ In the main card's **Music mini player** section:
 | `navbar_id` | bar ID: on the main card, to share it; on another card, to reuse that bar | — |
 | `theme` | Appearance: `auto` (follows light / dark mode), `dark`, `light`, `theme` (your theme's colours) | `auto` |
 | `labels` | `active` (active tab), `all`, `none` | `active` |
-| `mobile_style` | `docked` (stuck to the bottom), `floating` | `docked` |
-| `desktop_position` | `bottom`, `left`, `right`, `hidden` | `bottom` |
+| `mobile_style` | `docked` (stuck to the bottom), `floating`, `top` (docked at the top) | `docked` |
+| `desktop_position` | `bottom`, `top`, `left`, `right`, `hidden` | `bottom` |
+| `size` | `normal`, `large`, `xlarge`: size of icons, labels and the bar | `normal` |
+| `icon_size` / `label_size` | (YAML) exact icon / label size, in px | from `size` |
 | `auto_hide` | hide the bar when scrolling | `false` |
 | `haptic` | vibration on tap (mobile app) | `true` |
 | `accent` | main colour | `#26c6da` |
@@ -399,7 +459,8 @@ routes:
 |---|---|
 | The bar doesn't show on a view | Add the `custom:holm-navbar-card` card to that view (no settings). The main card must be in **the same dashboard**, or use a [bar ID](#several-dashboards). |
 | “No bar with the ID…” | Check the ID on the main card (case matters) and that its dashboard is managed from the UI. |
-| The bar hides the bottom of the page | The card adds a bottom margin to the view automatically; reload the page if needed. |
+| The bar hides the bottom (or top) of the page | The card adds a margin to the view automatically; reload the page if needed. |
+| The bar stays visible despite the card visibility | Put the condition on the card **of that view** (the bar follows the card of the view shown), then Ctrl + F5. |
 | No music note / empty panel with a message | Install **HOLM Music Card** and **Music Assistant**, then reload the page (Ctrl + F5). |
 | A player isn't taken into account | Only **Music Assistant** players are watched; check the *Watched players* list. |
 | A card's editor doesn't show | Wait a second (it is preloaded when the editor opens) or reload the page; you can also use the `{ }` code editor. |
